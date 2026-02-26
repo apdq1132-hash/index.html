@@ -3,23 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Lite Clone</title>
+    <title>Worm Snake Game - Professional Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: Arial; }
-        /* خلفية بنمط متداخل يشبه الصورة */
-        canvas { 
-            display: block; 
-            background-image: 
-                linear-gradient(30deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
-                linear-gradient(150deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
-                linear-gradient(30deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
-                linear-gradient(150deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
-                linear-gradient(60deg, #282828 25%, transparent 25.5%, transparent 75%, #282828 75%, #282828),
-                linear-gradient(60deg, #282828 25%, transparent 25.5%, transparent 75%, #282828 75%, #282828);
-            background-size: 80px 140px;
-        }
+        canvas { display: block; background-color: #151515; }
         #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
-        .stat { background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 25px; margin-bottom: 8px; border: 1px solid #555; font-weight: bold; }
+        .stat { background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 20px; margin-bottom: 5px; border: 1px solid #444; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -38,17 +27,19 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const WORLD_SIZE = 4000;
-let view = { x: 0, y: 0 };
+let view = { x: 0, y: 0, zoom: 0.8 }; // زوم الكاميرا لتحسين الرؤية
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false };
 
 class Snake {
     constructor(x, y, colors, isPlayer) {
         this.segments = [];
-        for(let i=0; i<25; i++) this.segments.push({x, y});
-        this.colors = colors; // مصفوفة ألوان للجسم المخطط
-        this.radius = 22; // حجم الثعبان كبير كما في الصورة
+        this.baseRadius = 18; // الدودة تبدأ بحجم واضح
+        this.currentRadius = this.baseRadius;
+        for(let i=0; i<30; i++) this.segments.push({x: x - i*5, y: y});
+        
+        this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
-        this.speed = 4;
+        this.speed = 5; // سرعة الدودة
         this.isPlayer = isPlayer;
         this.isDead = false;
         this.score = 0;
@@ -57,30 +48,31 @@ class Snake {
     draw() {
         if(this.isDead) return;
 
-        // رسم الجسم المخطط (ألوان متبادلة مثل الصورة)
+        // رسم الجسم المخطط (سمن الدودة يعتمد على النقاط)
         for (let i = this.segments.length - 1; i >= 0; i--) {
             ctx.beginPath();
-            ctx.fillStyle = this.colors[i % this.colors.length];
-            let size = this.radius * (1 - i / (this.segments.length * 2));
+            ctx.fillStyle = this.colors[Math.floor(i/3) % this.colors.length];
+            // الدودة تسمن تدريجياً
+            let size = this.currentRadius * (1 - i / (this.segments.length * 3));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // رسم الرأس والعيون الكبيرة (مثل الصورة بالضبط)
+        // رسم الوجه الاحترافي (عيون كبيرة وبؤبؤ)
         let head = this.segments[0];
         ctx.save();
         ctx.translate(head.x, head.y);
         ctx.rotate(this.angle);
 
-        // بياض العين الكبير
+        // بياض العين (بيضاوي وكبير)
         ctx.fillStyle = "white";
-        ctx.beginPath(); ctx.arc(10, -12, 9, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(10, 12, 9, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(12, -12, 10, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(12, 12, 10, 8, 0, 0, Math.PI*2); ctx.fill();
         
-        // بؤبؤ العين الأسود
+        // البؤبؤ الأسود
         ctx.fillStyle = "black";
-        ctx.beginPath(); ctx.arc(13, -12, 4, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(13, 12, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(15, -12, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(15, 12, 4, 0, Math.PI*2); ctx.fill();
 
         ctx.restore();
     }
@@ -88,86 +80,101 @@ class Snake {
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        let curSpeed = (this.isPlayer && mouse.pressed && this.segments.length > 15) ? this.speed * 2 : this.speed;
+        
+        // نظام السرعة القصوى (Boost)
+        let curSpeed = (this.isPlayer && mouse.pressed && this.segments.length > 20) ? this.speed * 2 : this.speed;
 
         if (this.isPlayer) {
             let targetAngle = Math.atan2(mouse.worldY - head.y, mouse.worldX - head.x);
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.12;
+            this.angle += diff * 0.15; // حركة سريعة وسلسة
         } else {
-            if (Math.random() < 0.03) this.angle += (Math.random() - 0.5) * 2;
+            // ذكاء اصطناعي للبوتات للبحث عن الطعام
+            if (Math.random() < 0.05) this.angle += (Math.random() - 0.5) * 2;
         }
 
         head.x += Math.cos(this.angle) * curSpeed;
         head.y += Math.sin(this.angle) * curSpeed;
 
-        // حدود العالم
+        // الموت عند لمس الحدود
         if(head.x < 0 || head.x > WORLD_SIZE || head.y < 0 || head.y > WORLD_SIZE) this.die();
 
         this.segments.unshift(head);
         this.segments.pop();
     }
 
+    grow() {
+        this.score += 10;
+        // زيادة الطول والسمن
+        for(let i=0; i<2; i++) this.segments.push({...this.segments[this.segments.length-1]});
+        if(this.currentRadius < 35) this.currentRadius += 0.2; // تسمن عند الأكل
+    }
+
     die() {
         this.isDead = true;
         this.segments.forEach((s, i) => {
-            if(i % 2 === 0) foods.push({x: s.x, y: s.y, color: this.colors[0], r: 10});
+            if(i % 3 === 0) foods.push({x: s.x, y: s.y, color: this.colors[0], r: 10});
         });
-        if(this.isPlayer) setTimeout(() => location.reload(), 2000);
+        if(this.isPlayer) setTimeout(() => location.reload(), 1500);
     }
 }
 
-// إنشاء الثعابين بالألوان المخططة مثل الصورة
-let player = new Snake(WORLD_SIZE/2, WORLD_SIZE/2, ["#ffffff", "#e0e0e0"], true); // اللاعب أبيض مائل للرمادي
+// ألوان الدودة كما في الصورة (مخطط ملون)
+let player = new Snake(WORLD_SIZE/2, WORLD_SIZE/2, ["#ffffff", "#cccccc"], true);
 let enemies = [
-    new Snake(800, 800, ["#7e57c2", "#5c6bc0", "#26a69a"], false), // مخطط بنفسجي وأخضر كالصورة
-    new Snake(1500, 1200, ["#ff7043", "#ffca28"], false),
-    new Snake(500, 2000, ["#66bb6a", "#d4e157"], false)
+    new Snake(800, 800, ["#9c27b0", "#4db6ac", "#ffffff"], false), // بنفسجي وأخضر وأبيض
+    new Snake(1500, 2000, ["#ff9800", "#ffeb3b"], false),
+    new Snake(2500, 1500, ["#2196f3", "#00bcd4"], false),
+    new Snake(1000, 3000, ["#f44336", "#ffffff"], false)
 ];
 let foods = [];
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    view.x = player.segments[0].x - canvas.width/2;
-    view.y = player.segments[0].y - canvas.height/2;
+    // الكاميرا تتبع اللاعب مع زوم مناسب
+    view.x = player.segments[0].x - (canvas.width / 2) / view.zoom;
+    view.y = player.segments[0].y - (canvas.height / 2) / view.zoom;
 
     ctx.save();
+    ctx.scale(view.zoom, view.zoom);
     ctx.translate(-view.x, -view.y);
 
-    // رسم الزون (الحد الأحمر)
-    ctx.strokeStyle = "red"; ctx.lineWidth = 15;
-    ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+    // رسم الساحة (نمط متداخل)
+    ctx.strokeStyle = "#252525"; ctx.lineWidth = 2;
+    for(let i=0; i<=WORLD_SIZE; i+=100) {
+        ctx.moveTo(i, 0); ctx.lineTo(i, WORLD_SIZE);
+        ctx.moveTo(0, i); ctx.lineTo(WORLD_SIZE, i);
+    }
+    ctx.stroke();
 
-    // رسم الطعام (فواكه وأشكال ملونة)
+    // رسم الطعام
     foods.forEach((f, i) => {
         ctx.beginPath(); ctx.fillStyle = f.color;
         ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
-        // لمعة على الطعام
-        ctx.fillStyle = "white"; ctx.globalAlpha = 0.3;
-        ctx.arc(f.x-2, f.y-2, f.r/2, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
-
-        if(Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y) < 35) {
+        
+        if(Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y) < player.currentRadius + 10) {
             foods.splice(i, 1);
-            for(let j=0; j<2; j++) player.segments.push({...player.segments[player.segments.length-1]});
-            player.score += 15;
+            player.grow();
             document.getElementById('scoreVal').innerText = player.score;
         }
     });
 
-    // تحديث وتصادم
+    // تحديث الكل وتصادم البوتات
     [player, ...enemies].forEach(s => {
         if(!s.isDead) {
             s.update();
             s.draw();
             
+            // تصادم الرأس بالجسم
             [player, ...enemies].forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach((seg, idx) => {
-                        if(idx > 2 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < 25) s.die();
+                        if(idx > 3 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.currentRadius + 5) {
+                            s.die();
+                        }
                     });
                 }
             });
@@ -175,22 +182,20 @@ function animate() {
     });
 
     ctx.restore();
-    if(foods.length < 250) foods.push({x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, color: `hsl(${Math.random()*360}, 80%, 60%)`, r: 8});
+    if(foods.length < 300) foods.push({x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, color: `hsl(${Math.random()*360}, 70%, 60%)`, r: 8});
     requestAnimationFrame(animate);
 }
 
-const updateInput = (e) => {
-    let clientX = e.clientX || (e.touches ? e.touches[0].clientX : mouse.x);
-    let clientY = e.clientY || (e.touches ? e.touches[0].clientY : mouse.y);
-    mouse.worldX = clientX + view.x;
-    mouse.worldY = clientY + view.y;
+const updateMouse = (e) => {
+    let x = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+    let y = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+    mouse.worldX = x / view.zoom + view.x;
+    mouse.worldY = y / view.zoom + view.y;
 };
-window.addEventListener('mousemove', updateInput);
-window.addEventListener('touchmove', updateInput);
+window.addEventListener('mousemove', updateInput => { updateMouse(updateInput); });
+window.addEventListener('touchmove', updateInput => { updateMouse(updateInput); });
 window.addEventListener('mousedown', () => mouse.pressed = true);
 window.addEventListener('mouseup', () => mouse.pressed = false);
-window.addEventListener('touchstart', (e) => { mouse.pressed = true; updateInput(e); });
-window.addEventListener('touchend', () => mouse.pressed = false);
 
 animate();
 </script>

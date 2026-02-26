@@ -3,325 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master Lite - Offline</title>
+    <title>Snake Lite Clone</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #121212; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        canvas { display: block; background-image: radial-gradient(#2a2a2a 1px, transparent 1px); background-size: 40px 40px; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; z-index: 10; }
-        .stat { background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; margin-bottom: 5px; border: 1px solid #444; }
-        #instructions { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #888; font-size: 14px; pointer-events: none; }
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: Arial; }
+        /* خلفية بنمط متداخل يشبه الصورة */
+        canvas { 
+            display: block; 
+            background-image: 
+                linear-gradient(30deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
+                linear-gradient(150deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
+                linear-gradient(30deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
+                linear-gradient(150deg, #222 12%, transparent 12.5%, transparent 87%, #222 87.5%, #222),
+                linear-gradient(60deg, #282828 25%, transparent 25.5%, transparent 75%, #282828 75%, #282828),
+                linear-gradient(60deg, #282828 25%, transparent 25.5%, transparent 75%, #282828 75%, #282828);
+            background-size: 80px 140px;
+        }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
+        .stat { background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 25px; margin-bottom: 8px; border: 1px solid #555; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    <div class="stat" id="score">النقاط: 0</div>
-    <div class="stat" id="rank">الترتيب: #1</div>
+    <div class="stat">النقاط: <span id="scoreVal">0</span></div>
+    <div class="stat">الترتيب: #1</div>
 </div>
-<div id="instructions">استخدم الماوس أو اللمس للتحرك • اضغط مطولاً للتسريع ⚡</div>
 
 <canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let mouse = { x: canvas.width / 2, y: canvas.height / 2, pressed: false };
-let score = 0;
-let gameActive = true;
-
-// مصفوفات الصور
-const snakeFaces = [
-    'https://raw.githubusercontent.com/Hippo-Lab/SnakeLite_Assets/main/face_happy_green.png',
-    'https://raw.githubusercontent.com/Hippo-Lab/SnakeLite_Assets/main/face_multi_purple.png',
-    'https://raw.githubusercontent.com/Hippo-Lab/SnakeLite_Assets/main/face_smile_blue.png',
-    'https://raw.githubusercontent.com/Hippo-Lab/SnakeLite_Assets/main/face_winking_orange.png'
-];
-const treats = ['🍎', '🍬', '🍩', '🍕', '🍓'];
-
-// تحميل الصور
-let loadedFaces = [];
-let facesToLoad = snakeFaces.length;
-snakeFaces.forEach((src, index) => {
-    let img = new Image();
-    img.onload = () => {
-        loadedFaces[index] = img;
-        if(--facesToLoad === 0) startNewGame();
-    };
-    img.onerror = () => {
-        // إذا فشل تحميل الصورة، استخدم شكلاً مبسطاً
-        console.error('Failed to load image:', src);
-        if(--facesToLoad === 0) startNewGame();
-    };
-    img.src = src;
-});
+const WORLD_SIZE = 4000;
+let view = { x: 0, y: 0 };
+let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false };
 
 class Snake {
-    constructor(x, y, color, isPlayer, faceIndex) {
-        this.x = x; this.y = y;
+    constructor(x, y, colors, isPlayer) {
         this.segments = [];
-        for(let i=0; i<15; i++) this.segments.push({x, y});
-        this.color = color;
-        this.isPlayer = isPlayer;
-        this.face = loadedFaces[faceIndex % loadedFaces.length];
+        for(let i=0; i<25; i++) this.segments.push({x, y});
+        this.colors = colors; // مصفوفة ألوان للجسم المخطط
+        this.radius = 22; // حجم الثعبان كبير كما في الصورة
         this.angle = Math.random() * Math.PI * 2;
-        this.speed = 3.5;
-        this.radius = 18;
-        this.maxLength = 15;
+        this.speed = 4;
+        this.isPlayer = isPlayer;
         this.isDead = false;
-        this.isBoosting = false;
+        this.score = 0;
     }
 
     draw() {
         if(this.isDead) return;
 
-        // رسم الجسم
+        // رسم الجسم المخطط (ألوان متبادلة مثل الصورة)
         for (let i = this.segments.length - 1; i >= 0; i--) {
             ctx.beginPath();
-            ctx.fillStyle = this.color;
-            ctx.globalAlpha = 1 - (i / this.segments.length * 0.5);
-            let size = this.radius * (1 - i / this.segments.length * 0.3);
+            ctx.fillStyle = this.colors[i % this.colors.length];
+            let size = this.radius * (1 - i / (this.segments.length * 2));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // رسم الرأس
+        // رسم الرأس والعيون الكبيرة (مثل الصورة بالضبط)
+        let head = this.segments[0];
         ctx.save();
-        ctx.globalAlpha = 1;
-        ctx.translate(this.segments[0].x, this.segments[0].y);
-        ctx.rotate(this.angle + Math.PI/2);
+        ctx.translate(head.x, head.y);
+        ctx.rotate(this.angle);
+
+        // بياض العين الكبير
+        ctx.fillStyle = "white";
+        ctx.beginPath(); ctx.arc(10, -12, 9, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(10, 12, 9, 0, Math.PI*2); ctx.fill();
         
-        if (this.face) {
-            ctx.drawImage(this.face, -this.radius*1.5, -this.radius*1.5, this.radius*3, this.radius*3);
-        } else {
-            // شكل احتياطي في حال فشل تحميل الصورة
-            ctx.beginPath();
-            ctx.fillStyle = "white";
-            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "black";
-            ctx.font = "20px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("X", 0, 0);
-        }
+        // بؤبؤ العين الأسود
+        ctx.fillStyle = "black";
+        ctx.beginPath(); ctx.arc(13, -12, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(13, 12, 4, 0, Math.PI*2); ctx.fill();
+
         ctx.restore();
     }
 
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        
-        // نظام التسريع
-        this.isBoosting = (this.isPlayer && mouse.pressed && this.segments.length > 20);
-        let curSpeed = this.isBoosting ? this.speed * 2 : this.speed;
-        
-        if (this.isBoosting && Math.random() > 0.8) {
-             let lastSeg = this.segments.pop();
-             food.push({x: lastSeg.x, y: lastSeg.y, item: '✨', size: 10});
-        }
+        let curSpeed = (this.isPlayer && mouse.pressed && this.segments.length > 15) ? this.speed * 2 : this.speed;
 
-        // الحركة والذكاء الاصطناعي
         if (this.isPlayer) {
-            let targetAngle = Math.atan2(mouse.y - head.y, mouse.x - head.x);
+            let targetAngle = Math.atan2(mouse.worldY - head.y, mouse.worldX - head.x);
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.1;
+            this.angle += diff * 0.12;
         } else {
-            // البوت يلحق الطعام القريب
-            let closestFood = null;
-            let minDist = Infinity;
-            food.forEach(f => {
-                let d = Math.hypot(this.x - f.x, this.y - f.y);
-                if (d < minDist) {
-                    minDist = d;
-                    closestFood = f;
-                }
-            });
-            if (closestFood) {
-                this.angle = Math.atan2(closestFood.y - this.y, closestFood.x - this.x);
-            } else if (Math.random() < 0.02) {
-                this.angle += (Math.random() - 0.5);
-            }
+            if (Math.random() < 0.03) this.angle += (Math.random() - 0.5) * 2;
         }
 
         head.x += Math.cos(this.angle) * curSpeed;
         head.y += Math.sin(this.angle) * curSpeed;
 
+        // حدود العالم
+        if(head.x < 0 || head.x > WORLD_SIZE || head.y < 0 || head.y > WORLD_SIZE) this.die();
+
         this.segments.unshift(head);
-        if (this.segments.length > this.maxLength) this.segments.pop();
-
-        // حدود الشاشة
-        if (head.x < -this.radius) head.x = canvas.width + this.radius;
-        if (head.x > canvas.width + this.radius) head.x = -this.radius;
-        if (head.y < -this.radius) head.y = canvas.height + this.radius;
-        if (head.y > canvas.height + this.radius) head.y = -this.radius;
-        
-        this.x = head.x; this.y = head.y;
+        this.segments.pop();
     }
-}
 
-let player;
-let enemies = [];
-let food = [];
-
-function startNewGame() {
-    score = 0;
-    document.getElementById('score').innerText = `النقاط: 0`;
-    
-    // إنشاء اللاعب
-    player = new Snake(canvas.width / 2, canvas.height / 2, '#4CAF50', true, 0);
-    
-    // إنشاء البوتات
-    enemies = [];
-    for(let i=0; i<3; i++) {
-        let x = Math.random() * canvas.width;
-        let y = Math.random() * canvas.height;
-        let color = ['#F44336', '#2196F3', '#9C27B0'][i];
-        enemies.push(new Snake(x, y, color, false, i + 1));
-    }
-    
-    food = [];
-    gameActive = true;
-    requestAnimationFrame(animate);
-}
-
-function spawnFood() {
-    if(food.length < 50) {
-        food.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            item: treats[Math.floor(Math.random() * treats.length)],
-            size: Math.random() * 10 + 15
+    die() {
+        this.isDead = true;
+        this.segments.forEach((s, i) => {
+            if(i % 2 === 0) foods.push({x: s.x, y: s.y, color: this.colors[0], r: 10});
         });
+        if(this.isPlayer) setTimeout(() => location.reload(), 2000);
     }
 }
 
-function checkCollisions() {
-    const snakes = [player, ...enemies];
-    for (let s of snakes) {
-        if (s.isDead) continue;
-        
-        let head = s.segments[0];
-        
-        // تصادم رأس ثعبان بجسم ثعبان آخر
-        for (let otherS of snakes) {
-            if (otherS.isDead) continue;
-            
-            // تحقق فقط إذا لم تكن تفحص الرأس مع نفسه
-            let startIndex = (s === otherS) ? 2 : 0;
-            
-            for (let i = startIndex; i < otherS.segments.length; i++) {
-                let seg = otherS.segments[i];
-                let dist = Math.hypot(head.x - seg.x, head.y - seg.y);
-                
-                if (dist < s.radius + 5) {
-                    s.isDead = true;
-                    // تحويل الثعبان إلى طعام
-                    s.segments.forEach(seg => {
-                        food.push({
-                            x: seg.x + (Math.random()-0.5)*10,
-                            y: seg.y + (Math.random()-0.5)*10,
-                            item: treats[Math.floor(Math.random() * treats.length)],
-                            size: Math.random() * 5 + 10
-                        });
-                    });
-                    
-                    if (s.isPlayer) {
-                        // لعبة الخسران
-                        ctx.fillStyle = "rgba(0,0,0,0.8)";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = "white";
-                        ctx.font = "50px Arial";
-                        ctx.textAlign = "center";
-                        ctx.fillText("لقد خسرت! انقر للبدء من جديد", canvas.width/2, canvas.height/2);
-                        gameActive = false;
-                        canvas.addEventListener('mousedown', restartGameOnce);
-                        canvas.addEventListener('touchstart', restartGameOnce);
-                    } else {
-                        // إعادة إنشاء البوت
-                        setTimeout(() => {
-                           if(gameActive) {
-                               let x = Math.random() * canvas.width;
-                               let y = Math.random() * canvas.height;
-                               s.x = x; s.y = y;
-                               s.segments = [{x, y}];
-                               for(let j=0; j<15; j++) s.segments.push({x, y});
-                               s.maxLength = 15;
-                               s.isDead = false;
-                               s.color = ['#F44336', '#2196F3', '#9C27B0'][Math.floor(Math.random()*3)];
-                               s.face = loadedFaces[Math.floor(Math.random()*snakeFaces.length)];
-                           }
-                        }, 2000);
-                    }
-                    return; // الخروج من مصفوفة فحص الرأس
-                }
-            }
-        }
-        
-        // تصادم مع الطعام
-        food.forEach((f, index) => {
-            let dist = Math.hypot(head.x - f.x, head.y - f.y);
-            if (dist < s.radius + f.size/2) {
-                food.splice(index, 1);
-                s.maxLength += 3;
-                if (s.isPlayer) {
-                    score += 10;
-                    document.getElementById('score').innerText = `النقاط: ${score}`;
-                }
-            }
-        });
-    }
-}
-
-function restartGameOnce() {
-    canvas.removeEventListener('mousedown', restartGameOnce);
-    canvas.removeEventListener('touchstart', restartGameOnce);
-    startNewGame();
-}
+// إنشاء الثعابين بالألوان المخططة مثل الصورة
+let player = new Snake(WORLD_SIZE/2, WORLD_SIZE/2, ["#ffffff", "#e0e0e0"], true); // اللاعب أبيض مائل للرمادي
+let enemies = [
+    new Snake(800, 800, ["#7e57c2", "#5c6bc0", "#26a69a"], false), // مخطط بنفسجي وأخضر كالصورة
+    new Snake(1500, 1200, ["#ff7043", "#ffca28"], false),
+    new Snake(500, 2000, ["#66bb6a", "#d4e157"], false)
+];
+let foods = [];
 
 function animate() {
-    if (!gameActive) return;
-    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    spawnFood();
-    checkCollisions();
+    
+    view.x = player.segments[0].x - canvas.width/2;
+    view.y = player.segments[0].y - canvas.height/2;
 
-    // تحديث ورسم الطعام
-    food.forEach(f => {
-        ctx.font = `${f.size}px Arial`;
-        ctx.fillText(f.item, f.x, f.y);
+    ctx.save();
+    ctx.translate(-view.x, -view.y);
+
+    // رسم الزون (الحد الأحمر)
+    ctx.strokeStyle = "red"; ctx.lineWidth = 15;
+    ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+
+    // رسم الطعام (فواكه وأشكال ملونة)
+    foods.forEach((f, i) => {
+        ctx.beginPath(); ctx.fillStyle = f.color;
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
+        // لمعة على الطعام
+        ctx.fillStyle = "white"; ctx.globalAlpha = 0.3;
+        ctx.arc(f.x-2, f.y-2, f.r/2, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+
+        if(Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y) < 35) {
+            foods.splice(i, 1);
+            for(let j=0; j<2; j++) player.segments.push({...player.segments[player.segments.length-1]});
+            player.score += 15;
+            document.getElementById('scoreVal').innerText = player.score;
+        }
     });
 
-    // تحديث ورسم الثعابين
-    const snakes = [player, ...enemies];
-    snakes.forEach(s => {
-        s.update();
-        s.draw();
+    // تحديث وتصادم
+    [player, ...enemies].forEach(s => {
+        if(!s.isDead) {
+            s.update();
+            s.draw();
+            
+            [player, ...enemies].forEach(other => {
+                if(s !== other && !other.isDead) {
+                    other.segments.forEach((seg, idx) => {
+                        if(idx > 2 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < 25) s.die();
+                    });
+                }
+            });
+        }
     });
 
+    ctx.restore();
+    if(foods.length < 250) foods.push({x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, color: `hsl(${Math.random()*360}, 80%, 60%)`, r: 8});
     requestAnimationFrame(animate);
 }
 
-// التحكم
-const updateMouse = (e) => {
-    mouse.x = e.clientX || e.touches[0].clientX;
-    mouse.y = e.clientY || e.touches[0].clientY;
+const updateInput = (e) => {
+    let clientX = e.clientX || (e.touches ? e.touches[0].clientX : mouse.x);
+    let clientY = e.clientY || (e.touches ? e.touches[0].clientY : mouse.y);
+    mouse.worldX = clientX + view.x;
+    mouse.worldY = clientY + view.y;
 };
-window.addEventListener('mousemove', updateMouse);
-window.addEventListener('touchmove', updateMouse);
+window.addEventListener('mousemove', updateInput);
+window.addEventListener('touchmove', updateInput);
 window.addEventListener('mousedown', () => mouse.pressed = true);
 window.addEventListener('mouseup', () => mouse.pressed = false);
-window.addEventListener('touchstart', () => mouse.pressed = true);
+window.addEventListener('touchstart', (e) => { mouse.pressed = true; updateInput(e); });
 window.addEventListener('touchend', () => mouse.pressed = false);
 
-// بدء اللعبة عندما تحمل الصور
-if(facesToLoad === 0) startNewGame();
-
+animate();
 </script>
 </body>
 </html>

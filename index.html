@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Emoji Arena</title>
+<title>Snake Offline Pro</title>
 <style>
-body{margin:0;overflow:hidden;background:#111;font-family:Arial}
-canvas{display:block}
-#ui{position:fixed;top:10px;left:10px;color:white;z-index:10}
-select{padding:5px;border-radius:8px}
+body{margin:0;overflow:hidden;background:#111;font-family:Arial;}
+canvas{display:block;}
+#ui{position:fixed;top:10px;left:10px;color:white;z-index:10;}
+select{padding:5px;border-radius:8px;}
 </style>
 </head>
 <body>
 
 <div id="ui">
 النقاط: <span id="score">0</span><br>
+سكن: 
 <select id="skin">
 <option value="#00ff88">أخضر</option>
 <option value="#00bfff">أزرق</option>
@@ -27,192 +28,181 @@ select{padding:5px;border-radius:8px}
 <canvas id="game"></canvas>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const worldSize=3500;
-const wall=30;
-const fruits=["🍎","🍌","🍇","🍉","🍓"];
+const worldSize = 3500;
+const wall = 30;
+const fruits = ["🍎","🍌","🍇","🍉","🍓"];
 
-let player,bots,foods,score,touchX,touchY;
+let player, bots, foods, score, touchX, touchY;
 
 /* ===== إنشاء حية ===== */
-function createSnake(x,y,len,color,isPlayer=false){
-let s={
-body:[],
-length:len,
-speed:2,
-angle:0,
-color:color,
-isPlayer:isPlayer
-};
-for(let i=0;i<len;i++) s.body.push({x:x,y:y});
-return s;
+function createSnake(x, y, len, color, isPlayer=false){
+    let s = {body:[], length:len, speed:2, angle:0, color:color, isPlayer:isPlayer};
+    for(let i=0;i<len;i++) s.body.push({x:x,y:y});
+    return s;
 }
 
-/* ===== بدء لعبة ===== */
+/* ===== بدء اللعبة ===== */
 function startGame(){
-score=0;
-document.getElementById("score").innerText=score;
+    score = 0;
+    document.getElementById("score").innerText = score;
 
-player=createSnake(worldSize/2,worldSize/2,40,"#00ff88",true);
+    player = createSnake(worldSize/2, worldSize/2, 40, "#00ff88", true);
 
-foods=[];
-for(let i=0;i<200;i++){
-foods.push({
-x:Math.random()*worldSize,
-y:Math.random()*worldSize,
-icon:fruits[Math.floor(Math.random()*fruits.length)]
-});
-}
+    foods = [];
+    for(let i=0;i<200;i++){
+        foods.push({
+            x: Math.random()*worldSize,
+            y: Math.random()*worldSize,
+            icon: fruits[Math.floor(Math.random()*fruits.length)]
+        });
+    }
 
-/* بوتات */
-bots=[];
-for(let i=0;i<6;i++){
-let bx=Math.random()*worldSize;
-let by=Math.random()*worldSize;
-let colors=["#888","#ff66ff","#66ffff","#ffff66"];
-let bot=createSnake(bx,by,30,colors[i%colors.length],false);
-bot.angle=Math.random()*Math.PI*2;
-bots.push(bot);
-}
+    /* بوتات ذكية */
+    bots = [];
+    for(let i=0;i<6;i++){
+        let bx=Math.random()*worldSize;
+        let by=Math.random()*worldSize;
+        let colors=["#888","#ff66ff","#66ffff","#ffff66","#ffaa00","#44ff44"];
+        let bot = createSnake(bx, by, 30, colors[i%colors.length], false);
+        bot.angle = Math.random()*Math.PI*2;
+        bots.push(bot);
+    }
 }
 startGame();
 
 /* ===== تحكم لمس ===== */
-touchX=canvas.width/2;
-touchY=canvas.height/2;
+touchX = canvas.width/2;
+touchY = canvas.height/2;
 
-canvas.addEventListener("touchmove",e=>{
-const rect=canvas.getBoundingClientRect();
-touchX=e.touches[0].clientX-rect.left;
-touchY=e.touches[0].clientY-rect.top;
+canvas.addEventListener("touchmove", e=>{
+    const rect = canvas.getBoundingClientRect();
+    touchX = e.touches[0].clientX - rect.left;
+    touchY = e.touches[0].clientY - rect.top;
 });
 
 /* ===== Grid ===== */
-function drawGrid(camX,camY){
-ctx.strokeStyle="#222";
-const g=100;
-for(let x=-camX%g;x<canvas.width;x+=g){
-ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();
-}
-for(let y=-camY%g;y<canvas.height;y+=g){
-ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();
-}
+function drawGrid(camX, camY){
+    ctx.strokeStyle = "#222";
+    const g = 100;
+    for(let x=-camX%g;x<canvas.width;x+=g){
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+    }
+    for(let y=-camY%g;y<canvas.height;y+=g){
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+    }
 }
 
-/* ===== رسم حية مع سمايلات ===== */
+/* ===== رسم الحية مع سمايلات ===== */
 function drawSnake(s){
-for(let i=s.body.length-1;i>=0;i--){
-ctx.beginPath();
-ctx.fillStyle=s.color;
-ctx.arc(s.body[i].x,s.body[i].y,14,0,Math.PI*2);
-ctx.fill();
+    for(let i=s.body.length-1;i>=0;i--){
+        ctx.beginPath();
+        ctx.fillStyle = s.color;
+        ctx.arc(s.body[i].x, s.body[i].y, 14,0,Math.PI*2);
+        ctx.fill();
+    }
+    let head = s.body[0];
+    ctx.beginPath();
+    ctx.fillStyle = s.color;
+    ctx.arc(head.x, head.y, 18,0,Math.PI*2);
+    ctx.fill();
+
+    /* عيون وفم سمايلات */
+    ctx.font="24px Arial";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText("😄", head.x, head.y+2);
 }
 
-/* رأس */
-let head=s.body[0];
-ctx.beginPath();
-ctx.fillStyle=s.color;
-ctx.arc(head.x,head.y,18,0,Math.PI*2);
-ctx.fill();
-
-/* سمايل */
-ctx.font="24px Arial";
-ctx.textAlign="center";
-ctx.textBaseline="middle";
-ctx.fillText("😄",head.x,head.y+2);
-}
-
-/* ===== تحديث حية ===== */
+/* ===== تحديث الحية ===== */
 function updateSnake(s){
+    if(s.isPlayer){
+        let dx = touchX - canvas.width/2;
+        let dy = touchY - canvas.height/2;
+        s.angle = Math.atan2(dy, dx);
+    } else {
+        /* بوت ذكي يذهب لأقرب فاكهة */
+        let nearest = foods[0];
+        let minDist = 999999;
+        for(let f of foods){
+            let d = Math.hypot(s.body[0].x - f.x, s.body[0].y - f.y);
+            if(d < minDist){ minDist=d; nearest=f; }
+        }
+        s.angle = Math.atan2(nearest.y - s.body[0].y, nearest.x - s.body[0].x);
+    }
 
-if(s.isPlayer){
-let dx=touchX-canvas.width/2;
-let dy=touchY-canvas.height/2;
-s.angle=Math.atan2(dy,dx);
-}else{
-/* ذكاء صناعي: اقرب فاكهة */
-let nearest=foods[0];
-let minDist=999999;
-for(let f of foods){
-let d=Math.hypot(s.body[0].x-f.x,s.body[0].y-f.y);
-if(d<minDist){minDist=d;nearest=f;}
-}
-s.angle=Math.atan2(nearest.y-s.body[0].y,nearest.x-s.body[0].x);
+    let newHead = {
+        x: s.body[0].x + Math.cos(s.angle)*s.speed,
+        y: s.body[0].y + Math.sin(s.angle)*s.speed
+    };
+
+    /* جدار */
+    if(newHead.x<wall||newHead.y<wall||newHead.x>worldSize-wall||newHead.y>worldSize-wall){
+        if(s.isPlayer){ startGame(); return; }
+        else { s.angle+=Math.PI; return; }
+    }
+
+    s.body.unshift(newHead);
+    if(s.body.length > s.length) s.body.pop();
+
+    /* أكل */
+    for(let f of foods){
+        let d = Math.hypot(newHead.x - f.x, newHead.y - f.y);
+        if(d < 25){
+            s.length += 6;
+            if(s.isPlayer){
+                score++;
+                document.getElementById("score").innerText = score;
+            }
+            f.x = Math.random()*worldSize;
+            f.y = Math.random()*worldSize;
+        }
+    }
 }
 
-let newHead={
-x:s.body[0].x+Math.cos(s.angle)*s.speed,
-y:s.body[0].y+Math.sin(s.angle)*s.speed
-};
-
-/* جدار */
-if(newHead.x<wall||newHead.y<wall||newHead.x>worldSize-wall||newHead.y>worldSize-wall){
-if(s.isPlayer){startGame();return;}
-else{s.angle+=Math.PI;return;}
-}
-
-s.body.unshift(newHead);
-if(s.body.length>s.length) s.body.pop();
-
-/* أكل */
-for(let f of foods){
-let d=Math.hypot(newHead.x-f.x,newHead.y-f.y);
-if(d<25){
-s.length+=6;
-if(s.isPlayer){
-score++;
-document.getElementById("score").innerText=score;
-}
-f.x=Math.random()*worldSize;
-f.y=Math.random()*worldSize;
-}
-}
-}
-
-/* ===== الحلقة ===== */
+/* ===== الحلقة الرئيسية ===== */
 function draw(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-let camX=player.body[0].x-canvas.width/2;
-let camY=player.body[0].y-canvas.height/2;
+    let camX = player.body[0].x - canvas.width/2;
+    let camY = player.body[0].y - canvas.height/2;
 
-drawGrid(camX,camY);
+    drawGrid(camX, camY);
 
-ctx.save();
-ctx.translate(-camX,-camY);
+    ctx.save();
+    ctx.translate(-camX, -camY);
 
-/* جدار */
-ctx.strokeStyle="red";
-ctx.lineWidth=wall;
-ctx.strokeRect(0,0,worldSize,worldSize);
+    /* جدار */
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = wall;
+    ctx.strokeRect(0,0,worldSize,worldSize);
 
-/* فواكه */
-ctx.font="30px Arial";
-for(let f of foods){
-ctx.fillText(f.icon,f.x-15,f.y+10);
-}
+    /* رسم الفواكه */
+    ctx.font="30px Arial";
+    for(let f of foods){
+        ctx.fillText(f.icon, f.x-15, f.y+10);
+    }
 
-/* تحديث بوتات */
-for(let b of bots){
-updateSnake(b);
-drawSnake(b);
-}
+    /* تحديث البوتات */
+    for(let b of bots){
+        updateSnake(b);
+        drawSnake(b);
+    }
 
-/* تحديث لاعب */
-updateSnake(player);
-player.color=document.getElementById("skin").value;
-drawSnake(player);
+    /* تحديث اللاعب */
+    updateSnake(player);
+    player.color = document.getElementById("skin").value;
+    drawSnake(player);
 
-ctx.restore();
-requestAnimationFrame(draw);
+    ctx.restore();
+    requestAnimationFrame(draw);
 }
 
 draw();
-
 </script>
 </body>
 </html>

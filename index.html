@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Worm Snake Master - Pro Edition</title>
+    <title>Worm Snake Master - Fix Control</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -27,7 +27,6 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// إعدادات العالم والكاميرا
 const WORLD_SIZE = 5000; 
 let view = { x: 0, y: 0 };
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false };
@@ -39,7 +38,7 @@ class Snake {
         this.color = color;
         this.radius = 18;
         this.angle = Math.random() * Math.PI * 2;
-        this.speed = 3.8; // سرعة سلسة ومتوازنة
+        this.speed = 3.8; 
         this.isPlayer = isPlayer;
         this.isDead = false;
         this.score = 0;
@@ -47,8 +46,6 @@ class Snake {
 
     draw() {
         if(this.isDead) return;
-
-        // رسم الجسم المخطط الاحترافي
         for (let i = this.segments.length - 1; i >= 0; i--) {
             ctx.beginPath();
             ctx.fillStyle = (Math.floor(i/3) % 2 === 0) ? this.color : "#ffffff";
@@ -57,34 +54,25 @@ class Snake {
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
         }
-
-        // رسم الوجه الاحترافي (عيون وفم)
         let head = this.segments[0];
         ctx.save();
         ctx.translate(head.x, head.y);
         ctx.rotate(this.angle);
         ctx.globalAlpha = 1;
-
-        // بياض العين
         ctx.fillStyle = "white";
         ctx.beginPath(); ctx.ellipse(12, -12, 11, 10, 0, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.ellipse(12, 12, 11, 10, 0, 0, Math.PI*2); ctx.fill();
-        // بؤبؤ العين
         ctx.fillStyle = "black";
         ctx.beginPath(); ctx.arc(16, -12, 5, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(16, 12, 5, 0, Math.PI*2); ctx.fill();
-        // الفم
         ctx.strokeStyle = "black"; ctx.lineWidth = 2.5; ctx.beginPath();
         ctx.arc(5, 0, 10, Math.PI*1.2, Math.PI*0.8); ctx.stroke();
-        
         ctx.restore();
     }
 
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        
-        // نظام السرعة السلس (Boost)
         let curSpeed = (this.isPlayer && mouse.pressed && this.segments.length > 20) ? this.speed * 1.6 : this.speed;
 
         if (this.isPlayer) {
@@ -92,9 +80,8 @@ class Snake {
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.1; // حركة دورانية سلسة
+            this.angle += diff * 0.1; 
         } else {
-            // ذكاء اصطناعي للبوتات للبحث عن الطعام
             let closestFood = null;
             let minDist = 300;
             foods.forEach(f => {
@@ -107,20 +94,15 @@ class Snake {
                 this.angle += (Math.random() - 0.5) * 2;
             }
         }
-
         head.x += Math.cos(this.angle) * curSpeed;
         head.y += Math.sin(this.angle) * curSpeed;
-
-        // حدود الزون
         if(head.x < 0 || head.x > WORLD_SIZE || head.y < 0 || head.y > WORLD_SIZE) this.die();
-
         this.segments.unshift(head);
         this.segments.pop();
     }
 
     die() {
         this.isDead = true;
-        // تحويل الجسم لطعام عند الموت
         this.segments.forEach(s => {
             foods.push({x: s.x, y: s.y, color: this.color, r: 10, item: '✨'});
         });
@@ -145,7 +127,7 @@ function spawnFood() {
             y: Math.random()*WORLD_SIZE,
             color: `hsl(${Math.random()*360}, 100%, 60%)`,
             item: treats[Math.floor(Math.random()*treats.length)],
-            r: 15 // حجم الفاكهة
+            r: 15 
         });
     }
 }
@@ -153,32 +135,21 @@ function spawnFood() {
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     spawnFood();
-    
-    // الكاميرا تتبع اللاعب
     view.x = player.segments[0].x - canvas.width/2;
     view.y = player.segments[0].y - canvas.height/2;
-
     ctx.save();
     ctx.translate(-view.x, -view.y);
-
-    // رسم الزون (الحد الأحمر)
     ctx.strokeStyle = "red"; ctx.lineWidth = 15;
     ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
-
-    // رسم الطعام (فواكه)
     foods.forEach((f, i) => {
         ctx.font = `${f.r * 1.5}px Arial`;
         ctx.fillText(f.item, f.x, f.y);
     });
-
-    // تحديث الكل وفحص التصادم
     let allSnakes = [player, ...enemies];
     allSnakes.forEach(s => {
         if(!s.isDead) {
             s.update();
             s.draw();
-            
-            // أكل الطعام والنمو
             foods.forEach((f, i) => {
                 if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 15) {
                     foods.splice(i, 1);
@@ -187,8 +158,6 @@ function animate() {
                     if(s.isPlayer) document.getElementById('scoreVal').innerText = s.score;
                 }
             });
-
-            // تصادم الرأس بالجسم (للكل)
             allSnakes.forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach(seg => {
@@ -198,17 +167,37 @@ function animate() {
             });
         }
     });
-
     ctx.restore();
     requestAnimationFrame(animate);
 }
 
-window.onmousemove = (e) => {
-    mouse.worldX = e.clientX + view.x;
-    mouse.worldY = e.clientY + view.y;
-};
-window.onmousedown = () => mouse.pressed = true;
-window.onmouseup = () => mouse.pressed = false;
+// --- تعديل التحكم باللمس هنا ---
+function handleInput(e) {
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    mouse.worldX = clientX + view.x;
+    mouse.worldY = clientY + view.y;
+}
+
+window.addEventListener('mousemove', handleInput);
+window.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // منع اهتزاز الشاشة عند اللمس
+    handleInput(e);
+}, { passive: false });
+
+window.addEventListener('mousedown', () => mouse.pressed = true);
+window.addEventListener('mouseup', () => mouse.pressed = false);
+window.addEventListener('touchstart', (e) => {
+    mouse.pressed = true;
+    handleInput(e);
+}, { passive: false });
+window.addEventListener('touchend', () => mouse.pressed = false);
 
 animate();
 </script>

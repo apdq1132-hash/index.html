@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لعبة الثعبان - موبايل</title>
+<title>Snake Mobile Pro</title>
 <style>
 body{
     margin:0;
-    background:#111;
+    background:linear-gradient(#1e1e1e,#000);
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -17,58 +17,80 @@ body{
     color:white;
 }
 canvas{
-    background:#000;
-    border:3px solid #0f0;
+    background:#111;
+    border-radius:15px;
+    box-shadow:0 0 20px #0f0;
+}
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    width:320px;
+    margin-bottom:10px;
+}
+select{
+    padding:5px;
+    border-radius:8px;
 }
 .controls{
     margin-top:15px;
     display:grid;
-    grid-template-columns:60px 60px 60px;
-    grid-template-rows:60px 60px;
+    grid-template-columns:80px 80px 80px;
+    grid-template-rows:80px 80px;
     gap:10px;
-    justify-content:center;
 }
 button{
-    font-size:24px;
+    font-size:28px;
     border:none;
-    border-radius:10px;
-    background:#0f0;
-    color:#000;
+    border-radius:15px;
+    background:#00ff88;
 }
-.score{
-    margin-top:10px;
+button:active{
+    background:#00cc66;
 }
 </style>
 </head>
 <body>
 
-<h2>🐍 لعبة الثعبان</h2>
-<canvas id="game" width="300" height="300"></canvas>
-<div class="score">النقاط: <span id="score">0</span></div>
+<div class="topbar">
+<div>النقاط: <span id="score">0</span></div>
+<select id="skin">
+<option value="#00ff00">أخضر</option>
+<option value="#00bfff">أزرق</option>
+<option value="#ff00ff">بنفسجي</option>
+<option value="#ff4444">أحمر</option>
+<option value="#ffaa00">برتقالي</option>
+</select>
+</div>
+
+<canvas id="game" width="320" height="320"></canvas>
 
 <div class="controls">
-    <div></div>
-    <button onclick="setDirection('UP')">⬆</button>
-    <div></div>
-    <button onclick="setDirection('LEFT')">⬅</button>
-    <button onclick="setDirection('DOWN')">⬇</button>
-    <button onclick="setDirection('RIGHT')">➡</button>
+<div></div>
+<button onclick="setDirection('UP')">⬆</button>
+<div></div>
+<button onclick="setDirection('LEFT')">⬅</button>
+<button onclick="setDirection('DOWN')">⬇</button>
+<button onclick="setDirection('RIGHT')">➡</button>
 </div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-const box = 15;
-let snake = [{x:10*box, y:10*box}];
-let direction = "RIGHT";
-let food = randomFood();
-let score = 0;
+const box=20;
+let snake=[{x:8*box,y:8*box}];
+let direction="RIGHT";
+let food=randomFood();
+let score=0;
+
+const fruits=["🍎","🍌","🍇","🍓","🍍"];
+let currentFruit=fruits[Math.floor(Math.random()*fruits.length)];
 
 function randomFood(){
+    currentFruit=fruits[Math.floor(Math.random()*fruits.length)];
     return {
-        x: Math.floor(Math.random()*19)*box,
-        y: Math.floor(Math.random()*19)*box
+        x:Math.floor(Math.random()*15)*box,
+        y:Math.floor(Math.random()*15)*box
     };
 }
 
@@ -80,16 +102,21 @@ function setDirection(dir){
 }
 
 function draw(){
-    ctx.fillStyle="#000";
-    ctx.fillRect(0,0,300,300);
+    ctx.fillStyle="#111";
+    ctx.fillRect(0,0,320,320);
+
+    let skinColor=document.getElementById("skin").value;
 
     for(let i=0;i<snake.length;i++){
-        ctx.fillStyle = i===0 ? "#0f0" : "#fff";
-        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+        ctx.fillStyle=skinColor;
+        ctx.beginPath();
+        ctx.arc(snake[i].x+box/2,snake[i].y+box/2,box/2-2,0,Math.PI*2);
+        ctx.fill();
     }
 
-    ctx.fillStyle="red";
-    ctx.fillRect(food.x, food.y, box, box);
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText(currentFruit,food.x+2,food.y+18);
 
     let headX=snake[0].x;
     let headY=snake[0].y;
@@ -109,9 +136,9 @@ function draw(){
 
     let newHead={x:headX,y:headY};
 
-    if(headX<0 || headY<0 || headX>=300 || headY>=300 || collision(newHead,snake)){
+    if(headX<0 || headY<0 || headX>=320 || headY>=320 || collision(newHead,snake)){
         clearInterval(game);
-        alert("انتهت اللعبة! نقاطك: "+score);
+        alert("انتهت اللعبة 🎮 نقاطك: "+score);
         location.reload();
     }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master Pro</title>
+    <title>Snake Master Fixed</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -35,7 +35,7 @@ const treats = ['🍎', '🍬', '🍩', '🍕', '🍓', '🧁', '🍭', '🍉', 
 class Snake {
     constructor(x, y, colors, isPlayer, faceType) {
         this.segments = [];
-        this.baseRadius = 22; // الحجم الابتدائي
+        this.baseRadius = 22; 
         this.radius = this.baseRadius;
         for(let i=0; i<30; i++) this.segments.push({x: x - i*5, y: y});
         this.colors = colors;
@@ -52,42 +52,45 @@ class Snake {
     draw() {
         if(this.isDead) return;
         
-        // رسم الجسم المخطط (يسمن ويطول)
         for (let i = this.segments.length - 1; i >= 0; i--) {
             ctx.beginPath();
             ctx.fillStyle = (Math.floor(i/3) % 2 === 0) ? this.colors[0] : this.colors[1];
-            // تدرج بسيط للحجم من الرأس للذيل
             let size = this.radius * (1 - i / (this.segments.length * 6));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // رسم الرأس
         let head = this.segments[0];
         ctx.save();
         ctx.translate(head.x, head.y);
         ctx.rotate(this.angle);
         
+        // العيون تكبر مع الرأس (مربوطة بالـ radius)
+        let eyeR = this.radius * 0.5; 
+        let pupilR = eyeR * 0.4;
+        
         ctx.fillStyle = "white";
-        // إذا كان لاعب -> وجه احترافي ثابت. إذا كان بوت -> وجوه متنوعة.
-        let eyeR = this.isPlayer ? 12 : (this.faceType === 1 ? 15 : 10);
-        ctx.beginPath(); ctx.ellipse(12, -12, eyeR, eyeR-2, 0, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(12, 12, eyeR, eyeR-2, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(this.radius*0.5, -this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(this.radius*0.5, this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
         
         ctx.fillStyle = "black";
-        ctx.beginPath(); ctx.arc(15, -12, 5, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(15, 12, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.radius*0.65, -this.radius*0.5, pupilR, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.radius*0.65, this.radius*0.5, pupilR, 0, Math.PI*2); ctx.fill();
 
-        ctx.strokeStyle = "black"; ctx.lineWidth = 3.5; ctx.beginPath();
-        let smile = this.isPlayer ? 0.8 : (this.faceType === 2 ? 0.4 : 0.9);
-        ctx.arc(5, 0, 11, Math.PI*(1+smile), Math.PI*(1-smile)); ctx.stroke();
+        // إضافة الحلك (الفم)
+        ctx.strokeStyle = "black"; 
+        ctx.lineWidth = this.radius * 0.15; 
+        ctx.beginPath();
+        let smile = 0.8;
+        ctx.arc(this.radius*0.2, 0, this.radius*0.5, Math.PI*(1+smile), Math.PI*(1-smile)); 
+        ctx.stroke();
+        
         ctx.restore();
     }
 
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        
         let curSpeed = (this.isPlayer && mouse.pressed && this.segments.length > 20) ? this.speed * 1.4 : this.speed;
 
         if (this.isPlayer) {
@@ -97,7 +100,6 @@ class Snake {
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.angle += diff * 0.12;
         } else {
-            // ذكاء البوت: تجنب الحدود + البحث عن طعام
             let margin = 500;
             if(head.x < margin) this.angle = 0;
             else if(head.x > WORLD_SIZE - margin) this.angle = Math.PI;
@@ -116,13 +118,12 @@ class Snake {
 
     grow() {
         this.eatCount++;
-        if(this.eatCount >= 3) { // ينمو كل 3 فواكه
+        if(this.eatCount >= 3) { 
             this.segments.push({...this.segments[this.segments.length-1]});
-            this.radius += 0.4; // يسمن بوضوح
+            this.radius += 0.8; // سمن واضح
             this.eatCount = 0;
             this.growLevel++;
             if(this.isPlayer) {
-                // الكاميرا تبتعد كل 10 مرات نمو
                 if(this.growLevel % 10 === 0) currentZoom = Math.max(0.25, 0.6 - (this.growLevel / 100));
             }
         }
@@ -135,7 +136,16 @@ class Snake {
                 foods.push({ x: s.x + (Math.random()-0.5)*30, y: s.y + (Math.random()-0.5)*30, item: treats[Math.floor(Math.random()*treats.length)], r: 18 });
             }
         });
-        if(this.isPlayer) setTimeout(() => location.reload(), 2000);
+        if(this.isPlayer) {
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            // رسبون للبوتات: يظهر بوت جديد فوراً عند موت القديم
+            setTimeout(() => {
+                const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF9800", "#ffffff"], ["#E91E63", "#00BCD4"]];
+                let index = enemies.indexOf(this);
+                if (index > -1) enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[Math.floor(Math.random()*skins.length)], false, Math.floor(Math.random()*3));
+            }, 100);
+        }
     }
 }
 
@@ -155,7 +165,6 @@ function spawnFood(count) {
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     view.x = player.segments[0].x - (canvas.width/2) / currentZoom;
     view.y = player.segments[0].y - (canvas.height/2) / currentZoom;
 

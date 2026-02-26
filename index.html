@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة الثعبان - موبايل</title>
+<style>
+body{
+    margin:0;
+    background:#111;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    font-family:Arial;
+    color:white;
+}
+canvas{
+    background:#000;
+    border:3px solid #0f0;
+}
+.controls{
+    margin-top:15px;
+    display:grid;
+    grid-template-columns:60px 60px 60px;
+    grid-template-rows:60px 60px;
+    gap:10px;
+    justify-content:center;
+}
+button{
+    font-size:24px;
+    border:none;
+    border-radius:10px;
+    background:#0f0;
+    color:#000;
+}
+.score{
+    margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<h2>🐍 لعبة الثعبان</h2>
+<canvas id="game" width="300" height="300"></canvas>
+<div class="score">النقاط: <span id="score">0</span></div>
+
+<div class="controls">
+    <div></div>
+    <button onclick="setDirection('UP')">⬆</button>
+    <div></div>
+    <button onclick="setDirection('LEFT')">⬅</button>
+    <button onclick="setDirection('DOWN')">⬇</button>
+    <button onclick="setDirection('RIGHT')">➡</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const box = 15;
+let snake = [{x:10*box, y:10*box}];
+let direction = "RIGHT";
+let food = randomFood();
+let score = 0;
+
+function randomFood(){
+    return {
+        x: Math.floor(Math.random()*19)*box,
+        y: Math.floor(Math.random()*19)*box
+    };
+}
+
+function setDirection(dir){
+    if(dir==="LEFT" && direction!=="RIGHT") direction="LEFT";
+    if(dir==="UP" && direction!=="DOWN") direction="UP";
+    if(dir==="RIGHT" && direction!=="LEFT") direction="RIGHT";
+    if(dir==="DOWN" && direction!=="UP") direction="DOWN";
+}
+
+function draw(){
+    ctx.fillStyle="#000";
+    ctx.fillRect(0,0,300,300);
+
+    for(let i=0;i<snake.length;i++){
+        ctx.fillStyle = i===0 ? "#0f0" : "#fff";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+    }
+
+    ctx.fillStyle="red";
+    ctx.fillRect(food.x, food.y, box, box);
+
+    let headX=snake[0].x;
+    let headY=snake[0].y;
+
+    if(direction==="LEFT") headX-=box;
+    if(direction==="UP") headY-=box;
+    if(direction==="RIGHT") headX+=box;
+    if(direction==="DOWN") headY+=box;
+
+    if(headX===food.x && headY===food.y){
+        score++;
+        document.getElementById("score").innerText=score;
+        food=randomFood();
+    }else{
+        snake.pop();
+    }
+
+    let newHead={x:headX,y:headY};
+
+    if(headX<0 || headY<0 || headX>=300 || headY>=300 || collision(newHead,snake)){
+        clearInterval(game);
+        alert("انتهت اللعبة! نقاطك: "+score);
+        location.reload();
+    }
+
+    snake.unshift(newHead);
+}
+
+function collision(head,array){
+    for(let i=0;i<array.length;i++){
+        if(head.x===array[i].x && head.y===array[i].y){
+            return true;
+        }
+    }
+    return false;
+}
+
+let game=setInterval(draw,120);
+</script>
+
+</body>
+</html>

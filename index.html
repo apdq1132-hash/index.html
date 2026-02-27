@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Magnet & Bots Return</title>
+    <title>Snake Master - Optimized Loot</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -120,10 +120,13 @@ class Snake {
     }
 
     grow(type) {
-        let power = (type === 'loot') ? 3 : 1;
+        // النمو بقدر اللوت المأكول: اللوت يعطي 6 نقاط والفاكهة العادية 1
+        let power = (type === 'loot') ? 6 : 1; 
         this.score += power;
         this.eatCount += power;
-        if(this.eatCount >= 2) { 
+        
+        // الأفعى تكبر تدريجياً بناءً على ما أكلته فقط
+        if(this.eatCount >= 3) { 
             this.segments.push({...this.segments[this.segments.length-1]});
             let growthRate = (this.score >= 6000 && this.score < 9000) ? 0.4 : 0.1;
             if (this.score >= 9000) growthRate = 0.01;
@@ -140,12 +143,16 @@ class Snake {
     die() {
         if(this.isDead) return;
         this.isDead = true;
+        // دمج اللوت: إسقاط لوت من كل 5 قطع لتقليل اللاغ مع زيادة الحجم والقيمة
         this.segments.forEach((s, idx) => {
-            if(idx % 1 === 0) { 
-                let dots = Math.ceil(this.radius / 25);
-                for(let j=0; j<dots; j++) {
-                    foods.push({ x: s.x + (Math.random()-0.5)*this.radius, y: s.y + (Math.random()-0.5)*this.radius, item: treats[Math.floor(Math.random()*treats.length)], type: 'loot' });
-                }
+            if(idx % 5 === 0) { 
+                foods.push({ 
+                    x: s.x + (Math.random()-0.5)*this.radius, 
+                    y: s.y + (Math.random()-0.5)*this.radius, 
+                    item: treats[Math.floor(Math.random()*treats.length)], 
+                    type: 'loot',
+                    big: true // لوت كبير وقيم
+                });
             }
         });
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
@@ -179,16 +186,20 @@ function animate() {
     ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 100; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
     let all = [player, ...enemies];
-    ctx.font = `44px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     
     foods.forEach((f, i) => {
+        // المغناطيس
         all.forEach(s => {
             if(!s.isDead && s.magnetTime > 0 && f.type !== 'power') {
                 let d = Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y);
                 if(d < 650) { f.x += (s.segments[0].x - f.x) * 0.25; f.y += (s.segments[0].y - f.y) * 0.25; }
             }
         });
+
+        // رسم اللوت (بحجم أكبر إذا كان لوت مدمج)
+        ctx.font = f.big ? `70px Arial` : `44px Arial`;
         ctx.fillText(f.item, f.x, f.y); 
+
         all.forEach(s => {
             if(!s.isDead && Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 20) {
                 if(f.type === 'power') {

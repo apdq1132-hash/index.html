@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Balanced Growth & Smart AI</title>
+    <title>Snake Master - Balanced Player Growth</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -98,14 +98,13 @@ class Snake {
                 }
             }
         } else {
-            // ذكاء اصطناعي مُطور لتجنب الزون دون الدوران حول النفس
             let margin = 1200;
             let centerAngle = Math.atan2(WORLD_SIZE/2 - head.y, WORLD_SIZE/2 - head.x);
             if (head.x < margin || head.x > WORLD_SIZE - margin || head.y < margin || head.y > WORLD_SIZE - margin) {
                 let diff = centerAngle - this.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.15; // انعطاف تدريجي نحو المركز
+                this.angle += diff * 0.15; 
             } else {
                 let target = null; let minDist = 800;
                 foods.forEach(f => {
@@ -130,8 +129,14 @@ class Snake {
     }
 
     grow(type, isBigLoot = false) {
-        // قيمة اللوت الكبير أصبحت 5 كما طلبت
-        let power = isBigLoot ? 5 : (type === 'loot' ? 3 : 1);
+        // تعديل معدل النمو ليكون أبطأ للاعب فقط
+        let power;
+        if (this.isPlayer) {
+            power = isBigLoot ? 3 : (type === 'loot' ? 1.5 : 0.6); // قيم أقل للاعب
+        } else {
+            power = isBigLoot ? 5 : (type === 'loot' ? 3 : 1); // البوتات كما هي
+        }
+        
         this.score += power;
         this.eatCount += power;
         

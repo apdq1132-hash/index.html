@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Powerups Reset</title>
+    <title>Snake Master - Smart Avoidance</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -50,6 +50,10 @@ class Snake {
         this.growLevel = 0;
         this.magnetTime = 0; 
         this.speedTime = 0;
+        
+        if(!this.isPlayer) {
+            setInterval(() => { if(!this.isDead) this.magnetTime = 600; }, 120000); 
+        }
     }
 
     draw() {
@@ -84,7 +88,6 @@ class Snake {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
         
-        // إدارة وقت الباور اب (المغناطيس سينتهي)
         if(this.magnetTime > 0) this.magnetTime--;
         if(this.speedTime > 0) { this.speed = this.baseSpeed * 1.8; this.speedTime--; }
         else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
@@ -96,18 +99,46 @@ class Snake {
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.angle += diff * 0.25;
         } else {
-            let target = null; let minDist = 1200;
-            foods.forEach(f => {
-                let d = Math.hypot(head.x - f.x, head.y - f.y);
-                if(d < minDist) { minDist = d; target = f; }
-            });
-            if(target) {
-                let targetA = Math.atan2(target.y - head.y, target.x - head.x);
-                let diff = targetA - this.angle;
+            // منطق التجنب الذكي (Avoidance Logic)
+            let avoidAngle = 0;
+            let obstacleDetected = false;
+            let allSnakes = [player, ...enemies];
+            
+            for(let other of allSnakes) {
+                if(other === this || other.isDead) continue;
+                for(let i=0; i<other.segments.length; i+=10) {
+                    let seg = other.segments[i];
+                    let d = Math.hypot(head.x - seg.x, head.y - seg.y);
+                    if(d < this.radius + other.radius + 50) { // مسافة الأمان
+                        obstacleDetected = true;
+                        let angleToObstacle = Math.atan2(seg.y - head.y, seg.x - head.x);
+                        avoidAngle = angleToObstacle + Math.PI / 2; // الانحراف بزاوية قائمة
+                        break;
+                    }
+                }
+                if(obstacleDetected) break;
+            }
+
+            if(obstacleDetected) {
+                let diff = avoidAngle - this.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.15; 
-            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
+                this.angle += diff * 0.2;
+            } else {
+                // العودة للبحث عن الطعام
+                let target = null; let minDist = 1200;
+                foods.forEach(f => {
+                    let d = Math.hypot(head.x - f.x, head.y - f.y);
+                    if(d < minDist) { minDist = d; target = f; }
+                });
+                if(target) {
+                    let targetA = Math.atan2(target.y - head.y, target.x - head.x);
+                    let diff = targetA - this.angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    this.angle += diff * 0.15; 
+                }
+            }
         }
 
         head.x += Math.cos(this.angle) * this.speed;
@@ -176,10 +207,7 @@ function animate() {
         all.forEach(s => {
             if(!s.isDead && s.magnetTime > 0 && f.type !== 'power') {
                 let d = Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y);
-                if(d < 650) { 
-                    f.x += (s.segments[0].x - f.x) * 0.25; 
-                    f.y += (s.segments[0].y - f.y) * 0.25; 
-                }
+                if(d < 650) { f.x += (s.segments[0].x - f.x) * 0.25; f.y += (s.segments[0].y - f.y) * 0.25; }
             }
         });
         ctx.fillText(f.item, f.x, f.y); 
@@ -191,18 +219,11 @@ function animate() {
             foods.forEach((f, i) => {
                 if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 30) {
                     if(f.type === 'power') {
-                        if(f.item === '🧲') s.magnetTime = 800; // وقت محدد للمغناطيس (ينتهي)
+                        if(f.item === '🧲') s.magnetTime = 800; 
                         if(f.item === '⚡') s.speedTime = 400;
                     } else { s.grow(f.type); }
                     foods.splice(i, 1);
                     if(s.isPlayer) { s.score += 25; document.getElementById('scoreVal').innerText = s.score; }
-                }
-            });
-            all.forEach(other => {
-                if(s !== other && !other.isDead) {
-                    other.segments.forEach((seg, idx) => {
-                        if(idx > 3 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.radius + 10) s.die();
-                    });
                 }
             });
         }

@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Max Precision</title>
+    <title>Snake Master - Ultra HD Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
         #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; z-index: 10; }
-        .stat { background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 20px; margin-bottom: 5px; border: 1px solid #333; font-size: 20px; font-weight: bold; }
+        .stat { background: rgba(0,0,0,0.85); padding: 12px 25px; border-radius: 30px; margin-bottom: 8px; border: 2px solid #444; font-size: 22px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -53,29 +53,45 @@ class Snake {
 
     draw() {
         if(this.isDead) return;
-        // رسم ذكي لمنع اللاك عند الكبر مع الحفاظ على الدقة
-        const step = this.segments.length > 200 ? 4 : (this.segments.length > 100 ? 3 : 2);
+        
+        // تحسين الجرافيكس: إضافة ظل خفيف ليعطي عمق ووضوح للأفاعي
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "rgba(0,0,0,0.3)";
+
+        const step = this.segments.length > 200 ? 3 : 2;
         for (let i = this.segments.length - 1; i >= 0; i--) {
             if (i % step !== 0 && i !== 0) continue; 
             ctx.beginPath();
             ctx.fillStyle = (Math.floor(i/3) % 2 === 0) ? this.colors[0] : this.colors[1];
-            let size = this.radius * (1 - i / (this.segments.length * 10));
+            let size = this.radius * (1 - i / (this.segments.length * 12));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
+            // إضافة تحديد بسيط لزيادة الوضوح (Crisp Edges)
+            ctx.strokeStyle = "rgba(0,0,0,0.1)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
+        
+        ctx.shadowBlur = 0; // إيقاف الظل لرسم الوجه بدقة
         let head = this.segments[0];
         ctx.save();
         ctx.translate(head.x, head.y);
         ctx.rotate(this.angle);
-        let eyeR = this.radius * 0.5; 
+        
+        let eyeR = this.radius * 0.52; 
         ctx.fillStyle = "white";
         ctx.beginPath(); ctx.ellipse(this.radius*0.5, -this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.ellipse(this.radius*0.5, this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = "black";
-        ctx.beginPath(); ctx.arc(this.radius*0.65, -this.radius*0.5, eyeR*0.4, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(this.radius*0.65, this.radius*0.5, eyeR*0.4, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = "black"; ctx.lineWidth = this.radius * 0.15; ctx.beginPath();
-        ctx.arc(this.radius*0.2, 0, this.radius*0.5, Math.PI*(1+0.8), Math.PI*(1-0.8)); ctx.stroke();
+        ctx.beginPath(); ctx.arc(this.radius*0.65, -this.radius*0.5, eyeR*0.45, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.radius*0.65, this.radius*0.5, eyeR*0.45, 0, Math.PI*2); ctx.fill();
+        
+        // رسم الفم بدقة ماكس
+        ctx.strokeStyle = "rgba(0,0,0,0.8)"; 
+        ctx.lineWidth = this.radius * 0.18; 
+        ctx.beginPath();
+        ctx.arc(this.radius*0.2, 0, this.radius*0.5, Math.PI*(1+0.85), Math.PI*(1-0.85)); 
+        ctx.stroke();
         ctx.restore();
     }
 
@@ -95,19 +111,18 @@ class Snake {
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.25; // زيادة الدقة في الالتفاف (Max Precision)
+            this.angle += diff * 0.28; // دقة التفاف فائقة
         } else {
-            // بوتات ذكية تهتم بالأكل للنمو والعدوانية
-            let target = null; let minDist = 1000;
+            let target = null; let minDist = 1200;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
                 if(d < minDist) { minDist = d; target = f; }
             });
-            // هجوم على أقرب أفعى عند الاقتراب
-            enemies.concat(player).forEach(s => {
+            let allSnakes = [player, ...enemies];
+            allSnakes.forEach(s => {
                 if(s !== this && !s.isDead) {
                     let d = Math.hypot(head.x - s.segments[0].x, head.y - s.segments[0].y);
-                    if(d < 350) target = s.segments[0];
+                    if(d < 400) target = s.segments[0];
                 }
             });
 
@@ -116,8 +131,8 @@ class Snake {
                 let diff = targetA - this.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.2; // دقة التفاف البوتات
-            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
+                this.angle += diff * 0.22; 
+            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2.5;
         }
 
         head.x += Math.cos(this.angle) * this.speed;
@@ -129,13 +144,15 @@ class Snake {
 
     grow(type) {
         this.eatCount++;
-        let trigger = (type === 'loot') ? 8 : 3; 
+        // تعديل الطلب: فاكهتين (2) فقط لتكبر البوتات والحية حلقة واحدة فوراً
+        let trigger = (type === 'food') ? 2 : (type === 'loot' ? 5 : 1); 
+        
         if(this.eatCount >= trigger) { 
             for(let i=0; i<2; i++) this.segments.push({...this.segments[this.segments.length-1]});
-            this.radius += 0.22; 
+            this.radius += 0.23; 
             this.eatCount = 0;
             this.growLevel++;
-            if(this.isPlayer && this.growLevel % 10 === 0) currentZoom = Math.max(0.18, 0.6 - (this.growLevel / 110));
+            if(this.isPlayer && this.growLevel % 10 === 0) currentZoom = Math.max(0.18, 0.6 - (this.growLevel / 115));
         }
     }
 
@@ -168,7 +185,7 @@ function spawnFood(count) {
             x: Math.random()*WORLD_SIZE, 
             y: Math.random()*WORLD_SIZE, 
             item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], 
-            r: 20, 
+            r: 22, 
             type: isPower ? 'power' : 'food' 
         });
     }
@@ -181,16 +198,17 @@ function animate() {
     ctx.save();
     ctx.scale(currentZoom, currentZoom);
     ctx.translate(-view.x, -view.y);
-    ctx.strokeStyle = "red"; ctx.lineWidth = 60; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
-    // رسم الأكل ثابت بدون اهتزاز
-    ctx.font = `40px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    // حدود الماب واضحة
+    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 80; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+    
+    ctx.font = `44px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     foods.forEach((f) => {
         if(player.magnetTime > 0 && f.type !== 'power') {
             let d = Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y);
             if(d < 500) {
-                f.x += (player.segments[0].x - f.x) * 0.2;
-                f.y += (player.segments[0].y - f.y) * 0.2;
+                f.x += (player.segments[0].x - f.x) * 0.22;
+                f.y += (player.segments[0].y - f.y) * 0.22;
             }
         }
         ctx.fillText(f.item, f.x, f.y); 
@@ -201,26 +219,26 @@ function animate() {
         if(!s.isDead) {
             s.update(); s.draw();
             foods.forEach((f, i) => {
-                if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 25) {
+                if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 28) {
                     if(f.type === 'power') {
                         if(f.item === '🧲' && s.isPlayer) s.magnetTime = 600;
                         if(f.item === '⚡' && s.isPlayer) s.speedTime = 300;
                     } else { s.grow(f.type); }
                     foods.splice(i, 1);
-                    if(s.isPlayer) { s.score += 15; document.getElementById('scoreVal').innerText = s.score; }
+                    if(s.isPlayer) { s.score += 20; document.getElementById('scoreVal').innerText = s.score; }
                 }
             });
             all.forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach((seg, idx) => {
-                        if(idx > 3 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.radius + 10) s.die();
+                        if(idx > 3 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.radius + 12) s.die();
                     });
                 }
             });
         }
     });
     ctx.restore();
-    if(foods.length < 1300) spawnFood(250);
+    if(foods.length < 1400) spawnFood(300);
     requestAnimationFrame(animate);
 }
 
@@ -237,7 +255,7 @@ window.addEventListener('mouseup', () => mouse.pressed = false);
 window.addEventListener('touchstart', (e) => { mouse.pressed = true; handleInput(e); }, { passive: false });
 window.addEventListener('touchend', () => mouse.pressed = false);
 
-spawnFood(1300);
+spawnFood(1400);
 const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF5722", "#000000"]];
 for(let i=0; i<45; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[i%4], false));
 animate();

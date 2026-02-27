@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Classic Zone Death</title>
+    <title>Snake Master - Safe Loot Spawn</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -98,7 +98,6 @@ class Snake {
                 }
             }
         } else {
-            // البوتات تبحث عن الأكل فقط وإذا لمست الحدود تموت
             let target = null; let minDist = 800;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
@@ -118,7 +117,6 @@ class Snake {
         this.segments.unshift(head);
         this.segments.pop();
 
-        // الموت الفوري عند لمس الزون (البوتات واللاعب)
         if(head.x < 0 || head.x > WORLD_SIZE || head.y < 0 || head.y > WORLD_SIZE) this.die();
     }
 
@@ -151,11 +149,20 @@ class Snake {
     die() {
         if(this.isDead) return;
         this.isDead = true;
+        const MARGIN = 150; // مسافة أمان لمنع اللوت من ملامسة الزون
         this.segments.forEach((s, idx) => {
             if(idx % 5 === 0) { 
+                // حساب موقع اللوت مع ضمان بقائه بعيداً عن الزون
+                let lootX = s.x + (Math.random()-0.5)*this.radius;
+                let lootY = s.y + (Math.random()-0.5)*this.radius;
+                
+                // منع اللوت من تخطي الزون
+                lootX = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootX));
+                lootY = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootY));
+
                 foods.push({ 
-                    x: s.x + (Math.random()-0.5)*this.radius, 
-                    y: s.y + (Math.random()-0.5)*this.radius, 
+                    x: lootX, 
+                    y: lootY, 
                     item: treats[Math.floor(Math.random()*treats.length)], 
                     type: 'loot',
                     big: true 
@@ -179,7 +186,10 @@ let foods = [];
 function spawnFood(count) {
     for(let i=0; i<count; i++) {
         let isPower = Math.random() < 0.035;
-        foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], type: isPower ? 'power' : 'food' });
+        // تطبيق مسافة الأمان عند السباون العادي للفواكه أيضاً
+        let fx = Math.max(100, Math.min(WORLD_SIZE - 100, Math.random()*WORLD_SIZE));
+        let fy = Math.max(100, Math.min(WORLD_SIZE - 100, Math.random()*WORLD_SIZE));
+        foods.push({ x: fx, y: fy, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], type: isPower ? 'power' : 'food' });
     }
 }
 

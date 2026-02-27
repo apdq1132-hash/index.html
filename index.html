@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - 10 Standard Bots</title>
+    <title>Snake Master - Magnet & Bots Return</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -15,7 +15,6 @@
 
 <div id="ui">
     <div class="stat">النقاط: <span id="scoreVal">0</span></div>
-    <div class="stat">الترتيب: #1</div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
@@ -29,8 +28,9 @@ canvas.height = window.innerHeight;
 const WORLD_SIZE = 20000; 
 let currentZoom = 0.6;
 let view = { x: 0, y: 0 };
-let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false };
+let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false, active: false };
 const treats = ['🍎', '🍬', '🍩', '🍕', '🍓', '🧁', '🍭', '🍉', '🍍'];
+const powerUps = ['🧲', '⚡'];
 
 class Snake {
     constructor(x, y, colors, isPlayer) {
@@ -42,14 +42,14 @@ class Snake {
         this.score = 0;
         this.eatCount = 0;
         this.growLevel = 0;
+        this.magnetTime = 0; 
+        this.speedTime = 0;
         
-        // جميع الحيات تبدأ بطول طبيعي (35 قطعة)
         for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
 
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
         this.baseSpeed = 4.8; 
-        this.speed = this.baseSpeed;
     }
 
     draw() {
@@ -80,7 +80,10 @@ class Snake {
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed;
+        
+        if(this.magnetTime > 0) this.magnetTime--;
+        if(this.speedTime > 0) { this.speed = this.baseSpeed * 1.8; this.speedTime--; }
+        else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
 
         if (this.isPlayer) {
             if (mouse.active) {
@@ -120,13 +123,10 @@ class Snake {
         let power = (type === 'loot') ? 3 : 1;
         this.score += power;
         this.eatCount += power;
-
         if(this.eatCount >= 2) { 
             this.segments.push({...this.segments[this.segments.length-1]});
-            let growthRate = 0.1;
-            if (this.score >= 6000 && this.score < 9000) growthRate = 0.4; 
-            else if (this.score >= 9000) growthRate = 0.01;
-            
+            let growthRate = (this.score >= 6000 && this.score < 9000) ? 0.4 : 0.1;
+            if (this.score >= 9000) growthRate = 0.01;
             if(this.radius < 200) this.radius += growthRate;
             this.eatCount = 0;
             this.growLevel++;
@@ -144,24 +144,15 @@ class Snake {
             if(idx % 1 === 0) { 
                 let dots = Math.ceil(this.radius / 25);
                 for(let j=0; j<dots; j++) {
-                    foods.push({ 
-                        x: s.x + (Math.random()-0.5)*this.radius, 
-                        y: s.y + (Math.random()-0.5)*this.radius, 
-                        item: treats[Math.floor(Math.random()*treats.length)], 
-                        type: 'loot' 
-                    });
+                    foods.push({ x: s.x + (Math.random()-0.5)*this.radius, y: s.y + (Math.random()-0.5)*this.radius, item: treats[Math.floor(Math.random()*treats.length)], type: 'loot' });
                 }
             }
         });
-
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
         else {
             setTimeout(() => {
                 let index = enemies.indexOf(this);
-                if (index > -1) {
-                    const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]];
-                    enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[Math.floor(Math.random()*skins.length)], false);
-                }
+                if (index > -1) enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][Math.floor(Math.random()*3)], false);
             }, 1000);
         }
     }
@@ -170,6 +161,13 @@ class Snake {
 let player = new Snake(WORLD_SIZE/2, WORLD_SIZE/2, ["#4CAF50", "#ffffff"], true);
 let enemies = [];
 let foods = [];
+
+function spawnFood(count) {
+    for(let i=0; i<count; i++) {
+        let isPower = Math.random() < 0.035;
+        foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], type: isPower ? 'power' : 'food' });
+    }
+}
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -183,19 +181,28 @@ function animate() {
     let all = [player, ...enemies];
     ctx.font = `44px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     
-    foods.forEach((f) => {
+    foods.forEach((f, i) => {
+        all.forEach(s => {
+            if(!s.isDead && s.magnetTime > 0 && f.type !== 'power') {
+                let d = Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y);
+                if(d < 650) { f.x += (s.segments[0].x - f.x) * 0.25; f.y += (s.segments[0].y - f.y) * 0.25; }
+            }
+        });
         ctx.fillText(f.item, f.x, f.y); 
+        all.forEach(s => {
+            if(!s.isDead && Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 20) {
+                if(f.type === 'power') {
+                    if(f.item === '🧲') s.magnetTime = 800;
+                    if(f.item === '⚡') s.speedTime = 400;
+                } else s.grow(f.type);
+                foods.splice(i, 1);
+            }
+        });
     });
 
     all.forEach(s => {
         if(!s.isDead) {
             s.update(); s.draw();
-            foods.forEach((f, i) => {
-                if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 20) {
-                    s.grow(f.type);
-                    foods.splice(i, 1);
-                }
-            });
             all.forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach((seg, idx) => {
@@ -210,13 +217,6 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-function spawnFood(count) {
-    for(let i=0; i<count; i++) {
-        foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, item: treats[Math.floor(Math.random()*treats.length)], type: 'food' });
-    }
-}
-
-mouse.active = false;
 window.addEventListener('mousemove', (e) => { mouse.active = true; mouse.worldX = e.clientX / currentZoom + view.x; mouse.worldY = e.clientY / currentZoom + view.y; });
 window.addEventListener('touchmove', (e) => { e.preventDefault(); mouse.active = true; mouse.worldX = e.touches[0].clientX / currentZoom + view.x; mouse.worldY = e.touches[0].clientY / currentZoom + view.y; }, { passive: false });
 window.addEventListener('mousedown', () => mouse.pressed = true);
@@ -225,12 +225,7 @@ window.addEventListener('touchstart', (e) => { mouse.pressed = true; mouse.activ
 window.addEventListener('touchend', () => { mouse.pressed = false; mouse.active = false; });
 
 spawnFood(5000);
-// إنشاء 10 بوتات عادية تبدأ من الصفر تماماً
-for(let i=0; i<10; i++) {
-    const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF9800", "#ffffff"]];
-    enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[i % skins.length], false));
-}
-
+for(let i=0; i<10; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i % 3], false));
 animate();
 </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Perfect Growth</title>
+    <title>Snake Master - Powerups Reset</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -37,7 +37,7 @@ class Snake {
     constructor(x, y, colors, isPlayer) {
         this.segments = [];
         this.radius = 22; 
-        this.maxRadius = 80; // حد أقصى للعرض لضمان جمالية اللعبة
+        this.maxRadius = 80;
         for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
@@ -48,7 +48,7 @@ class Snake {
         this.score = 0;
         this.eatCount = 0;
         this.growLevel = 0;
-        this.magnetTime = 0;
+        this.magnetTime = 0; 
         this.speedTime = 0;
     }
 
@@ -61,7 +61,6 @@ class Snake {
             if (i % step !== 0 && i !== 0) continue; 
             ctx.beginPath();
             ctx.fillStyle = (Math.floor(i/3) % 2 === 0) ? this.colors[0] : this.colors[1];
-            // معادلة رسم انسيابية تمنع التضخم البصري المزعج
             let size = this.radius * (1 - i / (this.segments.length * 20));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
@@ -85,6 +84,8 @@ class Snake {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
         
+        // إدارة وقت الباور اب (المغناطيس سينتهي)
+        if(this.magnetTime > 0) this.magnetTime--;
         if(this.speedTime > 0) { this.speed = this.baseSpeed * 1.8; this.speedTime--; }
         else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
 
@@ -95,7 +96,7 @@ class Snake {
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.angle += diff * 0.25;
         } else {
-            let target = null; let minDist = 1000;
+            let target = null; let minDist = 1200;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
                 if(d < minDist) { minDist = d; target = f; }
@@ -117,23 +118,14 @@ class Snake {
     }
 
     grow(type) {
-        // موازنة النمو: الفواكه تزيد الطول، اللوت يزيد الطول والعرض بشكل معقول
         this.eatCount += (type === 'food') ? 1 : 0.5; 
-        
         if(this.eatCount >= 2) { 
-            // زيادة الطول (إضافة حلقات)
             this.segments.push({...this.segments[this.segments.length-1]});
-            
-            // زيادة العرض بشكل تدريجي وبطيء جداً (للمحافظة على التوازن)
-            if(this.radius < this.maxRadius) {
-                this.radius += (type === 'food') ? 0.08 : 0.15; 
-            }
-            
+            if(this.radius < this.maxRadius) this.radius += (type === 'food') ? 0.08 : 0.15; 
             this.eatCount = 0;
             this.growLevel++;
             if(this.isPlayer) {
                 document.getElementById('scoreVal').innerText = Math.floor(this.score);
-                // الكاميرا تتراجع للخلف بنعومة عند الكبر
                 currentZoom = Math.max(0.12, 0.6 - (this.growLevel / 150));
             }
         }
@@ -163,7 +155,7 @@ let foods = [];
 
 function spawnFood(count) {
     for(let i=0; i<count; i++) {
-        let isPower = Math.random() < 0.03;
+        let isPower = Math.random() < 0.035;
         foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], r: 22, type: isPower ? 'power' : 'food' });
     }
 }
@@ -177,24 +169,30 @@ function animate() {
     ctx.translate(-view.x, -view.y);
     ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 100; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
+    let all = [player, ...enemies];
+
     ctx.font = `44px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     foods.forEach((f) => {
-        if(player.magnetTime > 0 && f.type !== 'power') {
-            let d = Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y);
-            if(d < 600) { f.x += (player.segments[0].x - f.x) * 0.22; f.y += (player.segments[0].y - f.y) * 0.22; }
-        }
+        all.forEach(s => {
+            if(!s.isDead && s.magnetTime > 0 && f.type !== 'power') {
+                let d = Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y);
+                if(d < 650) { 
+                    f.x += (s.segments[0].x - f.x) * 0.25; 
+                    f.y += (s.segments[0].y - f.y) * 0.25; 
+                }
+            }
+        });
         ctx.fillText(f.item, f.x, f.y); 
     });
 
-    let all = [player, ...enemies];
     all.forEach(s => {
         if(!s.isDead) {
             s.update(); s.draw();
             foods.forEach((f, i) => {
                 if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 30) {
                     if(f.type === 'power') {
-                        if(f.item === '🧲' && s.isPlayer) s.magnetTime = 600;
-                        if(f.item === '⚡' && s.isPlayer) s.speedTime = 400;
+                        if(f.item === '🧲') s.magnetTime = 800; // وقت محدد للمغناطيس (ينتهي)
+                        if(f.item === '⚡') s.speedTime = 400;
                     } else { s.grow(f.type); }
                     foods.splice(i, 1);
                     if(s.isPlayer) { s.score += 25; document.getElementById('scoreVal').innerText = s.score; }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Mega Map</title>
+    <title>Snake Master - Mega Loot</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -26,7 +26,6 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// تكبير حجم الماب للضعف
 const WORLD_SIZE = 20000; 
 let currentZoom = 0.6;
 let view = { x: 0, y: 0 };
@@ -94,7 +93,6 @@ class Snake {
         else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
 
         if (this.isPlayer) {
-            // تحديث الاتجاه فقط عند الضغط أو اللمس النشط لمنع الالتفاف عند الترك
             if (mouse.active) {
                 let dx = mouse.worldX - head.x;
                 let dy = mouse.worldY - head.y;
@@ -130,7 +128,8 @@ class Snake {
     }
 
     grow(type) {
-        this.eatCount += (type === 'food' || type === 'loot') ? 1 : 0.5; 
+        // إذا كان الطعام من "لوت" الحيات الميتة، ينمو الجسم بشكل أسرع قليلاً
+        this.eatCount += (type === 'loot') ? 1.5 : 1; 
         if(this.eatCount >= 2) { 
             this.segments.push({...this.segments[this.segments.length-1]});
             let growthRate = 0.08;
@@ -146,8 +145,12 @@ class Snake {
     die() {
         if(this.isDead) return;
         this.isDead = true;
+        // زيادة كمية اللوت الساقطة بشكل هائل لتناسب حجم الحية
         this.segments.forEach((s, idx) => {
-            if(idx % 3 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 20, type: 'loot' });
+            // الآن يسقط لوت أكثر بكثير (كل جزء تقريباً يترك أثراً)
+            if(idx % 1.5 === 0 || idx < 10) { 
+                foods.push({ x: s.x + (Math.random()-0.5)*20, y: s.y + (Math.random()-0.5)*20, item: treats[Math.floor(Math.random()*treats.length)], r: 20, type: 'loot' });
+            }
         });
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
         else {
@@ -223,7 +226,7 @@ function animate() {
         }
     });
     ctx.restore();
-    if(foods.length < 2000) spawnFood(500);
+    if(foods.length < 3000) spawnFood(800);
     requestAnimationFrame(animate);
 }
 
@@ -241,7 +244,7 @@ window.addEventListener('mouseup', () => { mouse.pressed = false; mouse.active =
 window.addEventListener('touchstart', (e) => { mouse.pressed = true; mouse.active = true; handleInput(e); }, { passive: false });
 window.addEventListener('touchend', () => { mouse.pressed = false; mouse.active = false; });
 
-spawnFood(2000);
+spawnFood(3000);
 for(let i=0; i<10; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
 animate();
 </script>

@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Real Growth Edition</title>
+    <title>Snake Master - Perfect Growth</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
-        canvas { display: block; image-rendering: -webkit-optimize-contrast; }
+        canvas { display: block; }
         #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; z-index: 10; }
-        .stat { background: rgba(0,0,0,0.85); padding: 12px 25px; border-radius: 30px; margin-bottom: 8px; border: 2px solid #444; font-size: 22px; font-weight: bold; }
+        .stat { background: rgba(0,0,0,0.85); padding: 12px 25px; border-radius: 30px; margin-bottom: 8px; border: 2px solid #444; font-size: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -37,6 +37,7 @@ class Snake {
     constructor(x, y, colors, isPlayer) {
         this.segments = [];
         this.radius = 22; 
+        this.maxRadius = 80; // حد أقصى للعرض لضمان جمالية اللعبة
         for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
@@ -53,14 +54,15 @@ class Snake {
 
     draw() {
         if(this.isDead) return;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "rgba(0,0,0,0.3)";
-        const step = this.segments.length > 150 ? 3 : 2;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(0,0,0,0.2)";
+        const step = this.segments.length > 200 ? 4 : (this.segments.length > 100 ? 3 : 2);
         for (let i = this.segments.length - 1; i >= 0; i--) {
             if (i % step !== 0 && i !== 0) continue; 
             ctx.beginPath();
             ctx.fillStyle = (Math.floor(i/3) % 2 === 0) ? this.colors[0] : this.colors[1];
-            let size = this.radius * (1 - i / (this.segments.length * 15));
+            // معادلة رسم انسيابية تمنع التضخم البصري المزعج
+            let size = this.radius * (1 - i / (this.segments.length * 20));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
         }
@@ -69,32 +71,31 @@ class Snake {
         ctx.save();
         ctx.translate(head.x, head.y);
         ctx.rotate(this.angle);
-        let eyeR = this.radius * 0.52; 
+        let eyeR = this.radius * 0.5; 
         ctx.fillStyle = "white";
-        ctx.beginPath(); ctx.ellipse(this.radius*0.5, -this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(this.radius*0.5, this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(this.radius*0.4, -this.radius*0.4, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(this.radius*0.4, this.radius*0.4, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = "black";
-        ctx.beginPath(); ctx.arc(this.radius*0.65, -this.radius*0.5, eyeR*0.45, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(this.radius*0.65, this.radius*0.5, eyeR*0.45, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineWidth = this.radius * 0.18; ctx.beginPath();
-        ctx.arc(this.radius*0.2, 0, this.radius*0.5, Math.PI*(1+0.85), Math.PI*(1-0.85)); ctx.stroke();
+        ctx.beginPath(); ctx.arc(this.radius*0.55, -this.radius*0.4, eyeR*0.4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.radius*0.55, this.radius*0.4, eyeR*0.4, 0, Math.PI*2); ctx.fill();
         ctx.restore();
     }
 
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed;
+        
         if(this.speedTime > 0) { this.speed = this.baseSpeed * 1.8; this.speedTime--; }
+        else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
 
         if (this.isPlayer) {
             let targetAngle = Math.atan2(mouse.worldY - head.y, mouse.worldX - head.x);
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.28;
+            this.angle += diff * 0.25;
         } else {
-            let target = null; let minDist = 1500;
+            let target = null; let minDist = 1000;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
                 if(d < minDist) { minDist = d; target = f; }
@@ -104,9 +105,10 @@ class Snake {
                 let diff = targetA - this.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.22; 
-            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2.5;
+                this.angle += diff * 0.15; 
+            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
         }
+
         head.x += Math.cos(this.angle) * this.speed;
         head.y += Math.sin(this.angle) * this.speed;
         this.segments.unshift(head);
@@ -115,21 +117,24 @@ class Snake {
     }
 
     grow(type) {
-        // تم تعديل المنطق: النمو الآن أسرع للبوتات واللاعب
-        let amount = (type === 'food') ? 1 : 3; // اللوت يعطي 3 حلقات فوراً
-        this.eatCount += amount;
+        // موازنة النمو: الفواكه تزيد الطول، اللوت يزيد الطول والعرض بشكل معقول
+        this.eatCount += (type === 'food') ? 1 : 0.5; 
         
-        if(this.eatCount >= 2) { // كل فاكهتين أو قطعة لوت واحدة تجعلها تكبر
-            let ringsToAdd = Math.floor(this.eatCount / 2);
-            for(let i=0; i < ringsToAdd; i++) {
-                this.segments.push({...this.segments[this.segments.length-1]});
-                this.radius += 0.25; // تكبير الحجم (العرض)
+        if(this.eatCount >= 2) { 
+            // زيادة الطول (إضافة حلقات)
+            this.segments.push({...this.segments[this.segments.length-1]});
+            
+            // زيادة العرض بشكل تدريجي وبطيء جداً (للمحافظة على التوازن)
+            if(this.radius < this.maxRadius) {
+                this.radius += (type === 'food') ? 0.08 : 0.15; 
             }
+            
             this.eatCount = 0;
             this.growLevel++;
             if(this.isPlayer) {
                 document.getElementById('scoreVal').innerText = Math.floor(this.score);
-                if(this.growLevel % 5 === 0) currentZoom = Math.max(0.15, 0.6 - (this.growLevel / 100));
+                // الكاميرا تتراجع للخلف بنعومة عند الكبر
+                currentZoom = Math.max(0.12, 0.6 - (this.growLevel / 150));
             }
         }
     }
@@ -137,14 +142,14 @@ class Snake {
     die() {
         this.isDead = true;
         this.segments.forEach((s, idx) => {
-            if(idx % 2 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 22, type: 'loot' });
+            if(idx % 4 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 20, type: 'loot' });
         });
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
         else {
             setTimeout(() => {
                 let index = enemies.indexOf(this);
                 if (index > -1) {
-                    const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF5722", "#000000"]];
+                    const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]];
                     enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[Math.floor(Math.random()*skins.length)], false);
                 }
             }, 1000);
@@ -170,10 +175,10 @@ function animate() {
     ctx.save();
     ctx.scale(currentZoom, currentZoom);
     ctx.translate(-view.x, -view.y);
-    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 80; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 100; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
     ctx.font = `44px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    foods.forEach((f, i) => {
+    foods.forEach((f) => {
         if(player.magnetTime > 0 && f.type !== 'power') {
             let d = Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y);
             if(d < 600) { f.x += (player.segments[0].x - f.x) * 0.22; f.y += (player.segments[0].y - f.y) * 0.22; }
@@ -192,13 +197,13 @@ function animate() {
                         if(f.item === '⚡' && s.isPlayer) s.speedTime = 400;
                     } else { s.grow(f.type); }
                     foods.splice(i, 1);
-                    if(s.isPlayer) s.score += 25;
+                    if(s.isPlayer) { s.score += 25; document.getElementById('scoreVal').innerText = s.score; }
                 }
             });
             all.forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach((seg, idx) => {
-                        if(idx > 3 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.radius + 12) s.die();
+                        if(idx > 3 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.radius + 10) s.die();
                     });
                 }
             });

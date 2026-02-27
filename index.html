@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - 1 Point System</title>
+    <title>Snake Master - Evolution</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -37,7 +37,7 @@ class Snake {
     constructor(x, y, colors, isPlayer) {
         this.segments = [];
         this.radius = 22; 
-        this.maxRadius = 80;
+        this.maxRadius = 80; // الحد الأقصى الافتراضي
         for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
@@ -93,11 +93,18 @@ class Snake {
         else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
 
         if (this.isPlayer) {
-            let targetAngle = Math.atan2(mouse.worldY - head.y, mouse.worldX - head.x);
-            let diff = targetAngle - this.angle;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.25;
+            // حل مشكلة الدوران حول النفس: إذا كانت المسافة كافية يتحرك باتجاه الماوس، وإلا يحافظ على زاويته
+            let dx = mouse.worldX - head.x;
+            let dy = mouse.worldY - head.y;
+            let dist = Math.hypot(dx, dy);
+            
+            if (dist > 10) { // فقط إذا كان الماوس بعيداً عن الرأس نحدث الاتجاه
+                let targetAngle = Math.atan2(dy, dx);
+                let diff = targetAngle - this.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                this.angle += diff * 0.25;
+            }
         } else {
             let target = null; let minDist = 1200;
             foods.forEach(f => {
@@ -124,11 +131,23 @@ class Snake {
         this.eatCount += (type === 'food' || type === 'loot') ? 1 : 0.5; 
         if(this.eatCount >= 2) { 
             this.segments.push({...this.segments[this.segments.length-1]});
-            if(this.radius < this.maxRadius) this.radius += (type === 'food') ? 0.08 : 0.15; 
+            
+            // نظام السمنة التدريجي حسب النقاط
+            let growthRate = 0.08;
+            if (this.score >= 7000 && this.score < 15000) {
+                growthRate = 0.15; // تزيد السمنة عند 7 آلاف
+            } else if (this.score >= 15000) {
+                growthRate = 0.02; // يتوقف السمن المفرط بعد 15 ألف للحفاظ على الشكل
+            }
+
+            if(this.radius < this.maxRadius || (this.score >= 7000 && this.radius < 180)) { 
+                this.radius += growthRate; 
+            }
+            
             this.eatCount = 0;
             this.growLevel++;
             if(this.isPlayer) {
-                currentZoom = Math.max(0.12, 0.6 - (this.growLevel / 150));
+                currentZoom = Math.max(0.1, 0.6 - (this.growLevel / 180));
             }
         }
     }
@@ -194,10 +213,9 @@ function animate() {
                         if(f.item === '🧲') s.magnetTime = 800; 
                         if(f.item === '⚡') s.speedTime = 400;
                     } else { 
+                        s.score += 1; 
                         s.grow(f.type); 
-                        // احتساب نقطة واحدة فقط عند الأكل
                         if(s.isPlayer) {
-                            s.score += 1; 
                             document.getElementById('scoreVal').innerText = Math.floor(s.score);
                         }
                     }
@@ -235,7 +253,8 @@ window.addEventListener('touchstart', (e) => { mouse.pressed = true; handleInput
 window.addEventListener('touchend', () => mouse.pressed = false);
 
 spawnFood(1500);
-for(let i=0; i<15; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
+// تعيين عدد البوتات إلى 10 فقط
+for(let i=0; i<10; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
 animate();
 </script>
 </body>

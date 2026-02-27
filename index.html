@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Smart Avoidance</title>
+    <title>Snake Master - Real Physics</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -99,46 +99,19 @@ class Snake {
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.angle += diff * 0.25;
         } else {
-            // منطق التجنب الذكي (Avoidance Logic)
-            let avoidAngle = 0;
-            let obstacleDetected = false;
-            let allSnakes = [player, ...enemies];
-            
-            for(let other of allSnakes) {
-                if(other === this || other.isDead) continue;
-                for(let i=0; i<other.segments.length; i+=10) {
-                    let seg = other.segments[i];
-                    let d = Math.hypot(head.x - seg.x, head.y - seg.y);
-                    if(d < this.radius + other.radius + 50) { // مسافة الأمان
-                        obstacleDetected = true;
-                        let angleToObstacle = Math.atan2(seg.y - head.y, seg.x - head.x);
-                        avoidAngle = angleToObstacle + Math.PI / 2; // الانحراف بزاوية قائمة
-                        break;
-                    }
-                }
-                if(obstacleDetected) break;
-            }
-
-            if(obstacleDetected) {
-                let diff = avoidAngle - this.angle;
+            // البوت يحاول التجنب قليلاً لكن الموت شغال
+            let target = null; let minDist = 1200;
+            foods.forEach(f => {
+                let d = Math.hypot(head.x - f.x, head.y - f.y);
+                if(d < minDist) { minDist = d; target = f; }
+            });
+            if(target) {
+                let targetA = Math.atan2(target.y - head.y, target.x - head.x);
+                let diff = targetA - this.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.2;
-            } else {
-                // العودة للبحث عن الطعام
-                let target = null; let minDist = 1200;
-                foods.forEach(f => {
-                    let d = Math.hypot(head.x - f.x, head.y - f.y);
-                    if(d < minDist) { minDist = d; target = f; }
-                });
-                if(target) {
-                    let targetA = Math.atan2(target.y - head.y, target.x - head.x);
-                    let diff = targetA - this.angle;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    this.angle += diff * 0.15; 
-                }
-            }
+                this.angle += diff * 0.15; 
+            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
         }
 
         head.x += Math.cos(this.angle) * this.speed;
@@ -149,7 +122,7 @@ class Snake {
     }
 
     grow(type) {
-        this.eatCount += (type === 'food') ? 1 : 0.5; 
+        this.eatCount += (type === 'food' || type === 'loot') ? 1 : 0.5; 
         if(this.eatCount >= 2) { 
             this.segments.push({...this.segments[this.segments.length-1]});
             if(this.radius < this.maxRadius) this.radius += (type === 'food') ? 0.08 : 0.15; 
@@ -163,9 +136,10 @@ class Snake {
     }
 
     die() {
+        if(this.isDead) return;
         this.isDead = true;
         this.segments.forEach((s, idx) => {
-            if(idx % 4 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 20, type: 'loot' });
+            if(idx % 3 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 20, type: 'loot' });
         });
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
         else {
@@ -224,6 +198,17 @@ function animate() {
                     } else { s.grow(f.type); }
                     foods.splice(i, 1);
                     if(s.isPlayer) { s.score += 25; document.getElementById('scoreVal').innerText = s.score; }
+                }
+            });
+
+            // قانون التصادم الحقيقي: إذا لمس الرأس أي جسم يموت فوراً
+            all.forEach(other => {
+                if(s !== other && !other.isDead) {
+                    other.segments.forEach((seg, idx) => {
+                        if(idx > 2 && Math.hypot(s.segments[0].x - seg.x, s.segments[0].y - seg.y) < s.radius + 8) {
+                            s.die();
+                        }
+                    });
                 }
             });
         }

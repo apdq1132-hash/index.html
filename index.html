@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Final Evolution</title>
+    <title>Snake Master - Mega Map</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -26,7 +26,8 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const WORLD_SIZE = 10000; 
+// تكبير حجم الماب للضعف
+const WORLD_SIZE = 20000; 
 let currentZoom = 0.6;
 let view = { x: 0, y: 0 };
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false };
@@ -93,17 +94,18 @@ class Snake {
         else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
 
         if (this.isPlayer) {
-            let dx = mouse.worldX - head.x;
-            let dy = mouse.worldY - head.y;
-            let dist = Math.hypot(dx, dy);
-            
-            // حل نهائي: لا يغير الاتجاه إلا إذا كان الماوس بعيداً (لمنع الالتفاف)
-            if (dist > this.radius * 2) { 
-                let targetAngle = Math.atan2(dy, dx);
-                let diff = targetAngle - this.angle;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.25;
+            // تحديث الاتجاه فقط عند الضغط أو اللمس النشط لمنع الالتفاف عند الترك
+            if (mouse.active) {
+                let dx = mouse.worldX - head.x;
+                let dy = mouse.worldY - head.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist > this.radius) {
+                    let targetAngle = Math.atan2(dy, dx);
+                    let diff = targetAngle - this.angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    this.angle += diff * 0.25;
+                }
             }
         } else {
             let target = null; let minDist = 1200;
@@ -131,24 +133,13 @@ class Snake {
         this.eatCount += (type === 'food' || type === 'loot') ? 1 : 0.5; 
         if(this.eatCount >= 2) { 
             this.segments.push({...this.segments[this.segments.length-1]});
-            
             let growthRate = 0.08;
-            // نظام السمنة المطلوب: يبدأ عند 6 آلاف وينتهي عند 9 آلاف
-            if (this.score >= 6000 && this.score < 9000) {
-                growthRate = 0.25; 
-            } else if (this.score >= 9000) {
-                growthRate = 0.01; // يتوقف النمو السمين هنا
-            }
-
-            if(this.radius < 200) { // السماح بالحجم الكبير فقط ضمن حدود
-                this.radius += growthRate; 
-            }
-            
+            if (this.score >= 6000 && this.score < 9000) { growthRate = 0.25; }
+            else if (this.score >= 9000) { growthRate = 0.01; }
+            if(this.radius < 200) { this.radius += growthRate; }
             this.eatCount = 0;
             this.growLevel++;
-            if(this.isPlayer) {
-                currentZoom = Math.max(0.1, 0.6 - (this.growLevel / 180));
-            }
+            if(this.isPlayer) { currentZoom = Math.max(0.1, 0.6 - (this.growLevel / 180)); }
         }
     }
 
@@ -215,14 +206,11 @@ function animate() {
                     } else { 
                         s.score += 1; 
                         s.grow(f.type); 
-                        if(s.isPlayer) {
-                            document.getElementById('scoreVal').innerText = Math.floor(s.score);
-                        }
+                        if(s.isPlayer) { document.getElementById('scoreVal').innerText = Math.floor(s.score); }
                     }
                     foods.splice(i, 1);
                 }
             });
-
             all.forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach((seg, idx) => {
@@ -235,24 +223,25 @@ function animate() {
         }
     });
     ctx.restore();
-    if(foods.length < 1500) spawnFood(400);
+    if(foods.length < 2000) spawnFood(500);
     requestAnimationFrame(animate);
 }
 
+mouse.active = false;
 function handleInput(e) {
     let cx = (e.touches ? e.touches[0].clientX : e.clientX);
     let cy = (e.touches ? e.touches[0].clientY : e.clientY);
     mouse.worldX = cx / currentZoom + view.x;
     mouse.worldY = cy / currentZoom + view.y;
 }
-window.addEventListener('mousemove', handleInput);
-window.addEventListener('touchmove', (e) => { e.preventDefault(); handleInput(e); }, { passive: false });
+window.addEventListener('mousemove', (e) => { mouse.active = true; handleInput(e); });
+window.addEventListener('touchmove', (e) => { e.preventDefault(); mouse.active = true; handleInput(e); }, { passive: false });
 window.addEventListener('mousedown', () => mouse.pressed = true);
-window.addEventListener('mouseup', () => mouse.pressed = false);
-window.addEventListener('touchstart', (e) => { mouse.pressed = true; handleInput(e); }, { passive: false });
-window.addEventListener('touchend', () => mouse.pressed = false);
+window.addEventListener('mouseup', () => { mouse.pressed = false; mouse.active = false; });
+window.addEventListener('touchstart', (e) => { mouse.pressed = true; mouse.active = true; handleInput(e); }, { passive: false });
+window.addEventListener('touchend', () => { mouse.pressed = false; mouse.active = false; });
 
-spawnFood(1500);
+spawnFood(2000);
 for(let i=0; i<10; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
 animate();
 </script>

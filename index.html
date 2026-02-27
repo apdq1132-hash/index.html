@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Real Physics</title>
+    <title>Snake Master - Fixed</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -41,7 +41,7 @@ class Snake {
         for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
-        this.baseSpeed = 4.8; 
+        this.baseSpeed = 4.8; // السرعة الأصلية التي طلبتها
         this.speed = this.baseSpeed;
         this.isPlayer = isPlayer;
         this.isDead = false;
@@ -99,7 +99,6 @@ class Snake {
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.angle += diff * 0.25;
         } else {
-            // البوت يحاول التجنب قليلاً لكن الموت شغال
             let target = null; let minDist = 1200;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
@@ -201,7 +200,6 @@ function animate() {
                 }
             });
 
-            // قانون التصادم الحقيقي: إذا لمس الرأس أي جسم يموت فوراً
             all.forEach(other => {
                 if(s !== other && !other.isDead) {
                     other.segments.forEach((seg, idx) => {
@@ -232,7 +230,8 @@ window.addEventListener('touchstart', (e) => { mouse.pressed = true; handleInput
 window.addEventListener('touchend', () => mouse.pressed = false);
 
 spawnFood(1500);
-for(let i=0; i<45; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
+// تقليل عدد البوتات إلى 15
+for(let i=0; i<15; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
 animate();
 </script>
 </body>

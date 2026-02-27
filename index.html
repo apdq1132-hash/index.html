@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Ultra HD Edition</title>
+    <title>Snake Master - Real Growth Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        canvas { display: block; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
+        canvas { display: block; image-rendering: -webkit-optimize-contrast; }
         #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; z-index: 10; }
-        .stat { background: rgba(0,0,0,0.85); padding: 12px 25px; border-radius: 30px; margin-bottom: 8px; border: 2px solid #444; font-size: 22px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .stat { background: rgba(0,0,0,0.85); padding: 12px 25px; border-radius: 30px; margin-bottom: 8px; border: 2px solid #444; font-size: 22px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -53,31 +53,22 @@ class Snake {
 
     draw() {
         if(this.isDead) return;
-        
-        // تحسين الجرافيكس: إضافة ظل خفيف ليعطي عمق ووضوح للأفاعي
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 8;
         ctx.shadowColor = "rgba(0,0,0,0.3)";
-
-        const step = this.segments.length > 200 ? 3 : 2;
+        const step = this.segments.length > 150 ? 3 : 2;
         for (let i = this.segments.length - 1; i >= 0; i--) {
             if (i % step !== 0 && i !== 0) continue; 
             ctx.beginPath();
             ctx.fillStyle = (Math.floor(i/3) % 2 === 0) ? this.colors[0] : this.colors[1];
-            let size = this.radius * (1 - i / (this.segments.length * 12));
+            let size = this.radius * (1 - i / (this.segments.length * 15));
             ctx.arc(this.segments[i].x, this.segments[i].y, size, 0, Math.PI * 2);
             ctx.fill();
-            // إضافة تحديد بسيط لزيادة الوضوح (Crisp Edges)
-            ctx.strokeStyle = "rgba(0,0,0,0.1)";
-            ctx.lineWidth = 1;
-            ctx.stroke();
         }
-        
-        ctx.shadowBlur = 0; // إيقاف الظل لرسم الوجه بدقة
+        ctx.shadowBlur = 0;
         let head = this.segments[0];
         ctx.save();
         ctx.translate(head.x, head.y);
         ctx.rotate(this.angle);
-        
         let eyeR = this.radius * 0.52; 
         ctx.fillStyle = "white";
         ctx.beginPath(); ctx.ellipse(this.radius*0.5, -this.radius*0.5, eyeR, eyeR*0.8, 0, 0, Math.PI*2); ctx.fill();
@@ -85,47 +76,29 @@ class Snake {
         ctx.fillStyle = "black";
         ctx.beginPath(); ctx.arc(this.radius*0.65, -this.radius*0.5, eyeR*0.45, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(this.radius*0.65, this.radius*0.5, eyeR*0.45, 0, Math.PI*2); ctx.fill();
-        
-        // رسم الفم بدقة ماكس
-        ctx.strokeStyle = "rgba(0,0,0,0.8)"; 
-        ctx.lineWidth = this.radius * 0.18; 
-        ctx.beginPath();
-        ctx.arc(this.radius*0.2, 0, this.radius*0.5, Math.PI*(1+0.85), Math.PI*(1-0.85)); 
-        ctx.stroke();
+        ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineWidth = this.radius * 0.18; ctx.beginPath();
+        ctx.arc(this.radius*0.2, 0, this.radius*0.5, Math.PI*(1+0.85), Math.PI*(1-0.85)); ctx.stroke();
         ctx.restore();
     }
 
     update() {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
-        
-        if(this.speedTime > 0) {
-            this.speed = this.baseSpeed * 1.8;
-            this.speedTime--;
-        } else {
-            this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed;
-        }
+        this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed;
+        if(this.speedTime > 0) { this.speed = this.baseSpeed * 1.8; this.speedTime--; }
 
         if (this.isPlayer) {
             let targetAngle = Math.atan2(mouse.worldY - head.y, mouse.worldX - head.x);
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.28; // دقة التفاف فائقة
+            this.angle += diff * 0.28;
         } else {
-            let target = null; let minDist = 1200;
+            let target = null; let minDist = 1500;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
                 if(d < minDist) { minDist = d; target = f; }
             });
-            let allSnakes = [player, ...enemies];
-            allSnakes.forEach(s => {
-                if(s !== this && !s.isDead) {
-                    let d = Math.hypot(head.x - s.segments[0].x, head.y - s.segments[0].y);
-                    if(d < 400) target = s.segments[0];
-                }
-            });
-
             if(target) {
                 let targetA = Math.atan2(target.y - head.y, target.x - head.x);
                 let diff = targetA - this.angle;
@@ -134,7 +107,6 @@ class Snake {
                 this.angle += diff * 0.22; 
             } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2.5;
         }
-
         head.x += Math.cos(this.angle) * this.speed;
         head.y += Math.sin(this.angle) * this.speed;
         this.segments.unshift(head);
@@ -143,23 +115,29 @@ class Snake {
     }
 
     grow(type) {
-        this.eatCount++;
-        // تعديل الطلب: فاكهتين (2) فقط لتكبر البوتات والحية حلقة واحدة فوراً
-        let trigger = (type === 'food') ? 2 : (type === 'loot' ? 5 : 1); 
+        // تم تعديل المنطق: النمو الآن أسرع للبوتات واللاعب
+        let amount = (type === 'food') ? 1 : 3; // اللوت يعطي 3 حلقات فوراً
+        this.eatCount += amount;
         
-        if(this.eatCount >= trigger) { 
-            for(let i=0; i<2; i++) this.segments.push({...this.segments[this.segments.length-1]});
-            this.radius += 0.23; 
+        if(this.eatCount >= 2) { // كل فاكهتين أو قطعة لوت واحدة تجعلها تكبر
+            let ringsToAdd = Math.floor(this.eatCount / 2);
+            for(let i=0; i < ringsToAdd; i++) {
+                this.segments.push({...this.segments[this.segments.length-1]});
+                this.radius += 0.25; // تكبير الحجم (العرض)
+            }
             this.eatCount = 0;
             this.growLevel++;
-            if(this.isPlayer && this.growLevel % 10 === 0) currentZoom = Math.max(0.18, 0.6 - (this.growLevel / 115));
+            if(this.isPlayer) {
+                document.getElementById('scoreVal').innerText = Math.floor(this.score);
+                if(this.growLevel % 5 === 0) currentZoom = Math.max(0.15, 0.6 - (this.growLevel / 100));
+            }
         }
     }
 
     die() {
         this.isDead = true;
         this.segments.forEach((s, idx) => {
-            if(idx % 2 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 20, type: 'loot' });
+            if(idx % 2 === 0) foods.push({ x: s.x, y: s.y, item: treats[Math.floor(Math.random()*treats.length)], r: 22, type: 'loot' });
         });
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
         else {
@@ -169,7 +147,7 @@ class Snake {
                     const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF5722", "#000000"]];
                     enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[Math.floor(Math.random()*skins.length)], false);
                 }
-            }, 800);
+            }, 1000);
         }
     }
 }
@@ -180,14 +158,8 @@ let foods = [];
 
 function spawnFood(count) {
     for(let i=0; i<count; i++) {
-        let isPower = Math.random() < 0.035;
-        foods.push({ 
-            x: Math.random()*WORLD_SIZE, 
-            y: Math.random()*WORLD_SIZE, 
-            item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], 
-            r: 22, 
-            type: isPower ? 'power' : 'food' 
-        });
+        let isPower = Math.random() < 0.03;
+        foods.push({ x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], r: 22, type: isPower ? 'power' : 'food' });
     }
 }
 
@@ -198,18 +170,13 @@ function animate() {
     ctx.save();
     ctx.scale(currentZoom, currentZoom);
     ctx.translate(-view.x, -view.y);
-    
-    // حدود الماب واضحة
     ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 80; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
     ctx.font = `44px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    foods.forEach((f) => {
+    foods.forEach((f, i) => {
         if(player.magnetTime > 0 && f.type !== 'power') {
             let d = Math.hypot(player.segments[0].x - f.x, player.segments[0].y - f.y);
-            if(d < 500) {
-                f.x += (player.segments[0].x - f.x) * 0.22;
-                f.y += (player.segments[0].y - f.y) * 0.22;
-            }
+            if(d < 600) { f.x += (player.segments[0].x - f.x) * 0.22; f.y += (player.segments[0].y - f.y) * 0.22; }
         }
         ctx.fillText(f.item, f.x, f.y); 
     });
@@ -219,13 +186,13 @@ function animate() {
         if(!s.isDead) {
             s.update(); s.draw();
             foods.forEach((f, i) => {
-                if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 28) {
+                if(Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 30) {
                     if(f.type === 'power') {
                         if(f.item === '🧲' && s.isPlayer) s.magnetTime = 600;
-                        if(f.item === '⚡' && s.isPlayer) s.speedTime = 300;
+                        if(f.item === '⚡' && s.isPlayer) s.speedTime = 400;
                     } else { s.grow(f.type); }
                     foods.splice(i, 1);
-                    if(s.isPlayer) { s.score += 20; document.getElementById('scoreVal').innerText = s.score; }
+                    if(s.isPlayer) s.score += 25;
                 }
             });
             all.forEach(other => {
@@ -238,7 +205,7 @@ function animate() {
         }
     });
     ctx.restore();
-    if(foods.length < 1400) spawnFood(300);
+    if(foods.length < 1500) spawnFood(400);
     requestAnimationFrame(animate);
 }
 
@@ -255,9 +222,8 @@ window.addEventListener('mouseup', () => mouse.pressed = false);
 window.addEventListener('touchstart', (e) => { mouse.pressed = true; handleInput(e); }, { passive: false });
 window.addEventListener('touchend', () => mouse.pressed = false);
 
-spawnFood(1400);
-const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF5722", "#000000"]];
-for(let i=0; i<45; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[i%4], false));
+spawnFood(1500);
+for(let i=0; i<45; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i%3], false));
 animate();
 </script>
 </body>

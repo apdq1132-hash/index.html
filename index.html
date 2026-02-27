@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Real Loot System</title>
+    <title>Snake Master - 10 Standard Bots</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -33,24 +33,18 @@ let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false };
 const treats = ['🍎', '🍬', '🍩', '🍕', '🍓', '🧁', '🍭', '🍉', '🍍'];
 
 class Snake {
-    constructor(x, y, colors, isPlayer, startScore = 0) {
+    constructor(x, y, colors, isPlayer) {
         this.segments = [];
         this.radius = 22; 
         this.maxRadius = 200;
         this.isPlayer = isPlayer;
         this.isDead = false;
-        this.score = startScore;
+        this.score = 0;
         this.eatCount = 0;
-        this.growLevel = startScore / 50;
+        this.growLevel = 0;
         
-        // ضبط الحجم والنمو للبوتات الزعماء من البداية
-        if(startScore >= 5000) {
-            this.radius = 120;
-            let initialSegments = 150; 
-            for(let i=0; i<initialSegments; i++) this.segments.push({x: x - i*5, y: y});
-        } else {
-            for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
-        }
+        // جميع الحيات تبدأ بطول طبيعي (35 قطعة)
+        for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
 
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
@@ -101,7 +95,6 @@ class Snake {
                 }
             }
         } else {
-            // البوتات تبحث عن اللوت لتكبر
             let target = null; let minDist = 800;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
@@ -124,7 +117,6 @@ class Snake {
     }
 
     grow(type) {
-        // اللوت يزيد النمو بشكل أكبر ليبرز الحجم الحقيقي
         let power = (type === 'loot') ? 3 : 1;
         this.score += power;
         this.eatCount += power;
@@ -132,7 +124,7 @@ class Snake {
         if(this.eatCount >= 2) { 
             this.segments.push({...this.segments[this.segments.length-1]});
             let growthRate = 0.1;
-            if (this.score >= 6000 && this.score < 9000) growthRate = 0.4; // سمنة سريعة
+            if (this.score >= 6000 && this.score < 9000) growthRate = 0.4; 
             else if (this.score >= 9000) growthRate = 0.01;
             
             if(this.radius < 200) this.radius += growthRate;
@@ -148,9 +140,8 @@ class Snake {
     die() {
         if(this.isDead) return;
         this.isDead = true;
-        // اللوت الحقيقي: الأفعى تسقط لوت بكثافة تعتمد على طولها وسمنتها
         this.segments.forEach((s, idx) => {
-            if(idx % 1 === 0) { // كل جزء يسقط طعاماً
+            if(idx % 1 === 0) { 
                 let dots = Math.ceil(this.radius / 25);
                 for(let j=0; j<dots; j++) {
                     foods.push({ 
@@ -169,7 +160,7 @@ class Snake {
                 let index = enemies.indexOf(this);
                 if (index > -1) {
                     const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]];
-                    enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[Math.floor(Math.random()*skins.length)], false, 0);
+                    enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[Math.floor(Math.random()*skins.length)], false);
                 }
             }, 1000);
         }
@@ -234,10 +225,11 @@ window.addEventListener('touchstart', (e) => { mouse.pressed = true; mouse.activ
 window.addEventListener('touchend', () => { mouse.pressed = false; mouse.active = false; });
 
 spawnFood(5000);
-// الزعماء الخمسة (5000 نقطة)
-for(let i=0; i<5; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, ["#FFD700", "#FF4500"], false, 5000));
-// بوتات عادية
-for(let i=0; i<5; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, ["#2196F3", "#ffffff"], false, 0));
+// إنشاء 10 بوتات عادية تبدأ من الصفر تماماً
+for(let i=0; i<10; i++) {
+    const skins = [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"], ["#FF9800", "#ffffff"]];
+    enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, skins[i % skins.length], false));
+}
 
 animate();
 </script>

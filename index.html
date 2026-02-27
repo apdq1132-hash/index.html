@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Smart AI Movement</title>
+    <title>Snake Master - Classic Zone Death</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -98,35 +98,27 @@ class Snake {
                 }
             }
         } else {
-            // منطق ذكاء اصطناعي مُحسن للهروب من الزون دون تعليق
-            let margin = 1000;
-            if (head.x < margin || head.x > WORLD_SIZE - margin || head.y < margin || head.y > WORLD_SIZE - margin) {
-                // بدلاً من الدوران، يتجه البوت فوراً نحو مركز العالم
-                let angleToCenter = Math.atan2(WORLD_SIZE/2 - head.y, WORLD_SIZE/2 - head.x);
-                let diff = angleToCenter - this.angle;
+            // البوتات تبحث عن الأكل فقط وإذا لمست الحدود تموت
+            let target = null; let minDist = 800;
+            foods.forEach(f => {
+                let d = Math.hypot(head.x - f.x, head.y - f.y);
+                if(d < minDist) { minDist = d; target = f; }
+            });
+            if(target) {
+                let targetA = Math.atan2(target.y - head.y, target.x - head.x);
+                let diff = targetA - this.angle;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                this.angle += diff * 0.2; // انعطاف قوي للداخل
-            } else {
-                let target = null; let minDist = 800;
-                foods.forEach(f => {
-                    let d = Math.hypot(head.x - f.x, head.y - f.y);
-                    if(d < minDist) { minDist = d; target = f; }
-                });
-                if(target) {
-                    let targetA = Math.atan2(target.y - head.y, target.x - head.x);
-                    let diff = targetA - this.angle;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    this.angle += diff * 0.1;
-                } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
-            }
+                this.angle += diff * 0.1;
+            } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
         }
 
         head.x += Math.cos(this.angle) * this.speed;
         head.y += Math.sin(this.angle) * this.speed;
         this.segments.unshift(head);
         this.segments.pop();
+
+        // الموت الفوري عند لمس الزون (البوتات واللاعب)
         if(head.x < 0 || head.x > WORLD_SIZE || head.y < 0 || head.y > WORLD_SIZE) this.die();
     }
 

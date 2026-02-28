@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Safe Zone Distance</title>
+    <title>Snake Master - Speed & Auto-Clean</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -81,9 +81,13 @@ class Snake {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
         
+        // زيادة السرعة بناءً على الحجم (كلما كبرت زادت السرعة قليلاً بدلاً من التباطؤ)
+        let sizeBonus = (this.radius - 22) * 0.015;
+        let currentBaseSpeed = this.baseSpeed + sizeBonus;
+
         if(this.magnetTime > 0) this.magnetTime--;
-        if(this.speedTime > 0) { this.speed = this.baseSpeed * 1.8; this.speedTime--; }
-        else { this.speed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.5 : this.baseSpeed; }
+        if(this.speedTime > 0) { this.speed = currentBaseSpeed * 1.8; this.speedTime--; }
+        else { this.speed = (this.isPlayer && mouse.pressed) ? currentBaseSpeed * 1.5 : currentBaseSpeed; }
 
         if (this.isPlayer) {
             if (mouse.active) {
@@ -149,14 +153,12 @@ class Snake {
     die() {
         if(this.isDead) return;
         this.isDead = true;
-        // مسافة أمان كبيرة جداً (500 بكسل) لإبقاء اللوت بعيداً عن الزون
         const MARGIN = 500; 
+        const now = Date.now();
         this.segments.forEach((s, idx) => {
             if(idx % 5 === 0) { 
                 let lootX = s.x + (Math.random()-0.5)*this.radius;
                 let lootY = s.y + (Math.random()-0.5)*this.radius;
-                
-                // دفع اللوت بقوة نحو الداخل إذا كان قريباً من الحواف
                 lootX = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootX));
                 lootY = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootY));
 
@@ -165,7 +167,8 @@ class Snake {
                     y: lootY, 
                     item: treats[Math.floor(Math.random()*treats.length)], 
                     type: 'loot',
-                    big: true 
+                    big: true,
+                    expiry: now + (5 * 60 * 1000) // يختفي بعد 5 دقائق
                 });
             }
         });
@@ -189,7 +192,7 @@ function spawnFood(count) {
         let isPower = Math.random() < 0.035;
         let fx = Math.max(SPAWN_MARGIN, Math.min(WORLD_SIZE - SPAWN_MARGIN, Math.random()*WORLD_SIZE));
         let fy = Math.max(SPAWN_MARGIN, Math.min(WORLD_SIZE - SPAWN_MARGIN, Math.random()*WORLD_SIZE));
-        foods.push({ x: fx, y: fy, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], type: isPower ? 'power' : 'food' });
+        foods.push({ x: fx, y: fy, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], type: isPower ? 'power' : 'food', expiry: Infinity });
     }
 }
 
@@ -203,8 +206,17 @@ function animate() {
     ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 100; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
     let all = [player, ...enemies];
+    const now = Date.now();
     
-    foods.forEach((f, i) => {
+    for (let i = foods.length - 1; i >= 0; i--) {
+        let f = foods[i];
+        
+        // نظام تنظيف اللوت المنتهي صلاحيته
+        if (now > f.expiry) {
+            foods.splice(i, 1);
+            continue;
+        }
+
         all.forEach(s => {
             if(!s.isDead && s.magnetTime > 0 && f.type !== 'power') {
                 let d = Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y);
@@ -215,16 +227,18 @@ function animate() {
         ctx.font = f.big ? `85px Arial` : `44px Arial`;
         ctx.fillText(f.item, f.x, f.y); 
 
+        let ate = false;
         all.forEach(s => {
-            if(!s.isDead && Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 20) {
+            if(!s.isDead && !ate && Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 20) {
                 if(f.type === 'power') {
                     if(f.item === '🧲') s.magnetTime = 800;
                     if(f.item === '⚡') s.speedTime = 400;
                 } else s.grow(f.type, f.big);
                 foods.splice(i, 1);
+                ate = true;
             }
         });
-    });
+    }
 
     all.forEach(s => {
         if(!s.isDead) {

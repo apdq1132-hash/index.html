@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Safe Loot Spawn</title>
+    <title>Snake Master - Safe Zone Distance</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -149,14 +149,14 @@ class Snake {
     die() {
         if(this.isDead) return;
         this.isDead = true;
-        const MARGIN = 150; // مسافة أمان لمنع اللوت من ملامسة الزون
+        // مسافة أمان كبيرة جداً (500 بكسل) لإبقاء اللوت بعيداً عن الزون
+        const MARGIN = 500; 
         this.segments.forEach((s, idx) => {
             if(idx % 5 === 0) { 
-                // حساب موقع اللوت مع ضمان بقائه بعيداً عن الزون
                 let lootX = s.x + (Math.random()-0.5)*this.radius;
                 let lootY = s.y + (Math.random()-0.5)*this.radius;
                 
-                // منع اللوت من تخطي الزون
+                // دفع اللوت بقوة نحو الداخل إذا كان قريباً من الحواف
                 lootX = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootX));
                 lootY = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootY));
 
@@ -184,11 +184,11 @@ let enemies = [];
 let foods = [];
 
 function spawnFood(count) {
+    const SPAWN_MARGIN = 500;
     for(let i=0; i<count; i++) {
         let isPower = Math.random() < 0.035;
-        // تطبيق مسافة الأمان عند السباون العادي للفواكه أيضاً
-        let fx = Math.max(100, Math.min(WORLD_SIZE - 100, Math.random()*WORLD_SIZE));
-        let fy = Math.max(100, Math.min(WORLD_SIZE - 100, Math.random()*WORLD_SIZE));
+        let fx = Math.max(SPAWN_MARGIN, Math.min(WORLD_SIZE - SPAWN_MARGIN, Math.random()*WORLD_SIZE));
+        let fy = Math.max(SPAWN_MARGIN, Math.min(WORLD_SIZE - SPAWN_MARGIN, Math.random()*WORLD_SIZE));
         foods.push({ x: fx, y: fy, item: isPower ? powerUps[Math.floor(Math.random()*2)] : treats[Math.floor(Math.random()*treats.length)], type: isPower ? 'power' : 'food' });
     }
 }

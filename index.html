@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Speed & Auto-Clean</title>
+    <title>Snake Master - 5K Growth Cap</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -81,7 +81,6 @@ class Snake {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
         
-        // زيادة السرعة بناءً على الحجم (كلما كبرت زادت السرعة قليلاً بدلاً من التباطؤ)
         let sizeBonus = (this.radius - 22) * 0.015;
         let currentBaseSpeed = this.baseSpeed + sizeBonus;
 
@@ -133,15 +132,18 @@ class Snake {
         }
         
         this.score += power;
-        this.eatCount += power;
         
-        while(this.eatCount >= 1) { 
-            this.segments.push({...this.segments[this.segments.length-1]});
-            let growthRate = (this.score >= 6000 && this.score < 9000) ? 0.4 : 0.08;
-            if (this.score >= 9000) growthRate = 0.01;
-            if(this.radius < 200) this.radius += growthRate;
-            this.eatCount -= 1;
-            this.growLevel++;
+        // شرط التوقف عن النمو (طولاً وسُمنًا) عند 5000 نقطة
+        if (this.score < 5000) {
+            this.eatCount += power;
+            while(this.eatCount >= 1) { 
+                this.segments.push({...this.segments[this.segments.length-1]});
+                let growthRate = (this.score >= 6000 && this.score < 9000) ? 0.4 : 0.08;
+                if (this.score >= 9000) growthRate = 0.01;
+                if(this.radius < 200) this.radius += growthRate;
+                this.eatCount -= 1;
+                this.growLevel++;
+            }
         }
 
         if(this.isPlayer) {
@@ -168,7 +170,7 @@ class Snake {
                     item: treats[Math.floor(Math.random()*treats.length)], 
                     type: 'loot',
                     big: true,
-                    expiry: now + (5 * 60 * 1000) // يختفي بعد 5 دقائق
+                    expiry: now + (5 * 60 * 1000) 
                 });
             }
         });
@@ -210,8 +212,6 @@ function animate() {
     
     for (let i = foods.length - 1; i >= 0; i--) {
         let f = foods[i];
-        
-        // نظام تنظيف اللوت المنتهي صلاحيته
         if (now > f.expiry) {
             foods.splice(i, 1);
             continue;

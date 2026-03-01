@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - 5K Growth Cap</title>
+    <title>Snake Master - Mega World (40K)</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -25,7 +25,8 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const WORLD_SIZE = 20000; 
+// تم مضاعفة حجم الماب ليصبح ضعف ما كان عليه
+const WORLD_SIZE = 40000; 
 let currentZoom = 0.6;
 let view = { x: 0, y: 0 };
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false, active: false };
@@ -133,7 +134,7 @@ class Snake {
         
         this.score += power;
         
-        // شرط التوقف عن النمو (طولاً وسُمنًا) عند 5000 نقطة
+        // شرط التوقف عن النمو عند 5000 نقطة
         if (this.score < 5000) {
             this.eatCount += power;
             while(this.eatCount >= 1) { 
@@ -253,7 +254,7 @@ function animate() {
         }
     });
     ctx.restore();
-    if(foods.length < 4000) spawnFood(1000);
+    if(foods.length < 8000) spawnFood(2000); // زيادة كثافة الطعام لتناسب الماب الضخم
     requestAnimationFrame(animate);
 }
 
@@ -264,8 +265,8 @@ window.addEventListener('mouseup', () => { mouse.pressed = false; mouse.active =
 window.addEventListener('touchstart', (e) => { mouse.pressed = true; mouse.active = true; }, { passive: false });
 window.addEventListener('touchend', () => { mouse.pressed = false; mouse.active = false; });
 
-spawnFood(5000);
-for(let i=0; i<10; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i % 3], false));
+spawnFood(10000); // زيادة عدد الطعام الأولي في الماب الضخم
+for(let i=0; i<15; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i % 3], false));
 animate();
 </script>
 </body>

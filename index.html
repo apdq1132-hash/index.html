@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - Fixed Speed & Score</title>
+    <title>Snake Master - 5K Growth Cap</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -25,8 +25,8 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const WORLD_SIZE = 40000; 
-let currentZoom = 0.5; // زووم أفضل للماب الضخم
+const WORLD_SIZE = 20000; 
+let currentZoom = 0.6;
 let view = { x: 0, y: 0 };
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, pressed: false, active: false };
 const treats = ['🍎', '🍬', '🍩', '🍕', '🍓', '🧁', '🍭', '🍉', '🍍'];
@@ -35,7 +35,7 @@ const powerUps = ['🧲', '⚡'];
 class Snake {
     constructor(x, y, colors, isPlayer) {
         this.segments = [];
-        this.radius = 25; 
+        this.radius = 22; 
         this.maxRadius = 200;
         this.isPlayer = isPlayer;
         this.isDead = false;
@@ -49,7 +49,7 @@ class Snake {
 
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
-        this.baseSpeed = 7; // سرعة عالية وثابتة
+        this.baseSpeed = 4.8; 
     }
 
     draw() {
@@ -81,9 +81,12 @@ class Snake {
         if(this.isDead) return;
         let head = { ...this.segments[0] };
         
-        let currentSpeed = (this.isPlayer && mouse.pressed) ? this.baseSpeed * 1.6 : this.baseSpeed;
-        if(this.speedTime > 0) { currentSpeed *= 1.8; this.speedTime--; }
+        let sizeBonus = (this.radius - 22) * 0.015;
+        let currentBaseSpeed = this.baseSpeed + sizeBonus;
+
         if(this.magnetTime > 0) this.magnetTime--;
+        if(this.speedTime > 0) { this.speed = currentBaseSpeed * 1.8; this.speedTime--; }
+        else { this.speed = (this.isPlayer && mouse.pressed) ? currentBaseSpeed * 1.5 : currentBaseSpeed; }
 
         if (this.isPlayer) {
             if (mouse.active) {
@@ -98,7 +101,7 @@ class Snake {
                 }
             }
         } else {
-            let target = null; let minDist = 1000;
+            let target = null; let minDist = 800;
             foods.forEach(f => {
                 let d = Math.hypot(head.x - f.x, head.y - f.y);
                 if(d < minDist) { minDist = d; target = f; }
@@ -112,8 +115,8 @@ class Snake {
             } else if (Math.random() < 0.02) this.angle += (Math.random() - 0.5) * 2;
         }
 
-        head.x += Math.cos(this.angle) * currentSpeed;
-        head.y += Math.sin(this.angle) * currentSpeed;
+        head.x += Math.cos(this.angle) * this.speed;
+        head.y += Math.sin(this.angle) * this.speed;
         this.segments.unshift(head);
         this.segments.pop();
 
@@ -121,23 +124,30 @@ class Snake {
     }
 
     grow(type, isBigLoot = false) {
-        // كل حبة أكل تساوي 1 نقطة بالضبط
-        let power = isBigLoot ? 5 : 1; 
+        let power;
+        if (this.isPlayer) {
+            power = isBigLoot ? 3 : (type === 'loot' ? 1.5 : 0.6); 
+        } else {
+            power = isBigLoot ? 5 : (type === 'loot' ? 3 : 1); 
+        }
         
         this.score += power;
         
+        // شرط التوقف عن النمو (طولاً وسُمنًا) عند 5000 نقطة
         if (this.score < 5000) {
             this.eatCount += power;
             while(this.eatCount >= 1) { 
                 this.segments.push({...this.segments[this.segments.length-1]});
-                if(this.radius < 200) this.radius += 0.1;
+                let growthRate = (this.score >= 6000 && this.score < 9000) ? 0.4 : 0.08;
+                if (this.score >= 9000) growthRate = 0.01;
+                if(this.radius < 200) this.radius += growthRate;
                 this.eatCount -= 1;
                 this.growLevel++;
             }
         }
 
         if(this.isPlayer) {
-            currentZoom = Math.max(0.15, 0.5 - (this.growLevel / 1000));
+            currentZoom = Math.max(0.1, 0.6 - (this.growLevel / 250));
             document.getElementById('scoreVal').innerText = Math.floor(this.score);
         }
     }
@@ -149,9 +159,19 @@ class Snake {
         const now = Date.now();
         this.segments.forEach((s, idx) => {
             if(idx % 5 === 0) { 
-                let lootX = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, s.x + (Math.random()-0.5)*50));
-                let lootY = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, s.y + (Math.random()-0.5)*50));
-                foods.push({ x: lootX, y: lootY, item: treats[Math.floor(Math.random()*treats.length)], type: 'loot', big: true, expiry: now + (5 * 60 * 1000) });
+                let lootX = s.x + (Math.random()-0.5)*this.radius;
+                let lootY = s.y + (Math.random()-0.5)*this.radius;
+                lootX = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootX));
+                lootY = Math.max(MARGIN, Math.min(WORLD_SIZE - MARGIN, lootY));
+
+                foods.push({ 
+                    x: lootX, 
+                    y: lootY, 
+                    item: treats[Math.floor(Math.random()*treats.length)], 
+                    type: 'loot',
+                    big: true,
+                    expiry: now + (5 * 60 * 1000) 
+                });
             }
         });
         if(this.isPlayer) setTimeout(() => location.reload(), 2000);
@@ -185,28 +205,31 @@ function animate() {
     ctx.save();
     ctx.scale(currentZoom, currentZoom);
     ctx.translate(-view.x, -view.y);
-    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 150; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 100; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
     
     let all = [player, ...enemies];
     const now = Date.now();
     
     for (let i = foods.length - 1; i >= 0; i--) {
         let f = foods[i];
-        if (now > f.expiry) { foods.splice(i, 1); continue; }
+        if (now > f.expiry) {
+            foods.splice(i, 1);
+            continue;
+        }
 
         all.forEach(s => {
             if(!s.isDead && s.magnetTime > 0 && f.type !== 'power') {
                 let d = Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y);
-                if(d < 800) { f.x += (s.segments[0].x - f.x) * 0.25; f.y += (s.segments[0].y - f.y) * 0.25; }
+                if(d < 650) { f.x += (s.segments[0].x - f.x) * 0.25; f.y += (s.segments[0].y - f.y) * 0.25; }
             }
         });
 
-        ctx.font = f.big ? `100px Arial` : `60px Arial`;
+        ctx.font = f.big ? `85px Arial` : `44px Arial`;
         ctx.fillText(f.item, f.x, f.y); 
 
         let ate = false;
         all.forEach(s => {
-            if(!s.isDead && !ate && Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 30) {
+            if(!s.isDead && !ate && Math.hypot(s.segments[0].x - f.x, s.segments[0].y - f.y) < s.radius + 20) {
                 if(f.type === 'power') {
                     if(f.item === '🧲') s.magnetTime = 800;
                     if(f.item === '⚡') s.speedTime = 400;
@@ -230,7 +253,7 @@ function animate() {
         }
     });
     ctx.restore();
-    if(foods.length < 10000) spawnFood(2000);
+    if(foods.length < 4000) spawnFood(1000);
     requestAnimationFrame(animate);
 }
 
@@ -241,8 +264,8 @@ window.addEventListener('mouseup', () => { mouse.pressed = false; mouse.active =
 window.addEventListener('touchstart', (e) => { mouse.pressed = true; mouse.active = true; }, { passive: false });
 window.addEventListener('touchend', () => { mouse.pressed = false; mouse.active = false; });
 
-spawnFood(12000);
-for(let i=0; i<20; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i % 3], false));
+spawnFood(5000);
+for(let i=0; i<10; i++) enemies.push(new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][i % 3], false));
 animate();
 </script>
 </body>

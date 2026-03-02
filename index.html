@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake Master - 5K Growth Cap</title>
+    <title>Snake Master - Fixed Reset</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -34,6 +34,11 @@ const powerUps = ['🧲', '⚡'];
 
 class Snake {
     constructor(x, y, colors, isPlayer) {
+        this.init(x, y, colors, isPlayer);
+    }
+
+    // وظيفة تهيئة الأفعى (تستخدم عند البداية وعند إعادة اللعب)
+    init(x, y, colors, isPlayer) {
         this.segments = [];
         this.radius = 22; 
         this.maxRadius = 200;
@@ -44,12 +49,10 @@ class Snake {
         this.growLevel = 0;
         this.magnetTime = 0; 
         this.speedTime = 0;
-        
         for(let i=0; i<35; i++) this.segments.push({x: x - i*5, y: y});
-
         this.colors = colors;
         this.angle = Math.random() * Math.PI * 2;
-        this.baseSpeed = 4.8; 
+        this.baseSpeed = 4.8;
     }
 
     draw() {
@@ -133,7 +136,6 @@ class Snake {
         
         this.score += power;
         
-        // شرط التوقف عن النمو (طولاً وسُمنًا) عند 5000 نقطة
         if (this.score < 5000) {
             this.eatCount += power;
             while(this.eatCount >= 1) { 
@@ -174,8 +176,10 @@ class Snake {
                 });
             }
         });
-        if(this.isPlayer) setTimeout(() => location.reload(), 2000);
-        else {
+        if(this.isPlayer) {
+            // استبدال إعادة تحميل الصفحة بإعادة تصفير اللعبة داخلياً
+            setTimeout(() => resetGame(), 2000);
+        } else {
             setTimeout(() => {
                 let index = enemies.indexOf(this);
                 if (index > -1) enemies[index] = new Snake(Math.random()*WORLD_SIZE, Math.random()*WORLD_SIZE, [["#F44336", "#ffffff"], ["#2196F3", "#ffffff"], ["#9C27B0", "#FFEB3B"]][Math.floor(Math.random()*3)], false);
@@ -187,6 +191,13 @@ class Snake {
 let player = new Snake(WORLD_SIZE/2, WORLD_SIZE/2, ["#4CAF50", "#ffffff"], true);
 let enemies = [];
 let foods = [];
+
+// الوظيفة المسؤولة عن تصفير النقاط والمكان دون الخروج من الصفحة
+function resetGame() {
+    player.init(WORLD_SIZE/2, WORLD_SIZE/2, ["#4CAF50", "#ffffff"], true);
+    document.getElementById('scoreVal').innerText = "0";
+    currentZoom = 0.6;
+}
 
 function spawnFood(count) {
     const SPAWN_MARGIN = 500;

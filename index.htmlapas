@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ball Sort - My Custom Game</title>
+    <style>
+        /* تغيير الخلفية لتكون داكنة واحترافية */
+        body { background-color: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; font-family: Arial; }
+        #game-container { position: relative; width: 360px; height: 600px; border: 2px solid #16213e; background: #0f3460; border-radius: 15px; }
+        .tube { position: absolute; bottom: 50px; width: 50px; height: 180px; border: 3px solid #e94560; border-radius: 0 0 25px 25px; display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 5px; cursor: pointer; }
+        /* ألوان الكرات (اخترت لك ألواناً فسفورية تختلف عن المعتاد) */
+        .ball { width: 40px; height: 40px; border-radius: 50%; margin: 2px; }
+        .color-1 { background: #00fff5; } /* تركوازي */
+        .color-2 { background: #7122fa; } /* بنفسجي */
+        .color-3 { background: #ff00c8; } /* وردي */
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h2 style="text-align: center;">Ball Sort Custom</h2>
+        <div class="tube" style="left: 30px;" onclick="move(0)"></div>
+        <div class="tube" style="left: 110px;" onclick="move(1)"></div>
+        <div class="tube" style="left: 190px;" onclick="move(2)"></div>
+        <div class="tube" style="left: 270px;" onclick="move(3)"></div>
+    </div>
+
+    <script>
+        // منطق اللعبة البسيط للتحقق من الحركة
+        let tubes = [[1,2,3,1], [2,3,1,2], [3,1,2,3], []]; // توزيع الكرات البدائي
+        let selectedTube = null;
+
+        function render() {
+            const tubeElements = document.querySelectorAll('.tube');
+            tubeElements.forEach((el, i) => {
+                el.innerHTML = '';
+                tubes[i].forEach(colorNum => {
+                    let ball = document.createElement('div');
+                    ball.className = `ball color-${colorNum}`;
+                    el.appendChild(ball);
+                });
+            });
+        }
+
+        function move(i) {
+            if (selectedTube === null) {
+                if (tubes[i].length > 0) selectedTube = i;
+            } else {
+                if (tubes[i].length < 4) {
+                    let ball = tubes[selectedTube].pop();
+                    tubes[i].push(ball);
+                }
+                selectedTube = null;
+            }
+            render();
+        }
+        render();
+    </script>
+</body>
+</html>
